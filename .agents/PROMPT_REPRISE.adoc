@@ -1,0 +1,27 @@
+= PROMPT_REPRISE — codex-gradle
+
+'''
+== Resume de la derniere session (Session 0 — 2026-05-06)
+
+*Objectif* : Bootstrap gouvernance agent codex-gradle + scaffold du plugin Gradle.
+
+*Ce qui a ete fait* :
+- Creation du projet `foundry/codex-gradle/` avec pattern monorepo a builds independants
+- Convention plugin `codex.gradle-plugin-conventions` (buildSrc)
+- Version catalog: pdfbox 3.0.4, tika 3.1.0, flexmark 0.64.8, asciidoctorj 3.0.0
+- Plugin `com.cheroliv.codex.doc-pipeline` (version 0.1.0-SNAPSHOT)
+- Task `extractText` — extraction PDFBox avec sortByPosition, incrémentale
+- Documentation canonique `AUGMENTED_CONTEXT_PIPELINE.adoc` (1806 lignes)
+- Gouvernance agent codex créée (AGENT.adoc, INDEX, PROMPT_REPRISE, SESSION_PROCEDURE)
+
+*Prochaine étape* : CDX-1 — Tester extractText sur un PDF de `office/books-collection/`
+
+*Fichiers critiques a charger en EAGER* :
+- `AGENT.adoc`
+- `AUGMENTED_CONTEXT_PIPELINE.adoc` (section codex, l.1470+)
+- `PLAN_ATTAQUE_DOC_PIPELINE.adoc` (dans la racine workspace)
+
+*Codebases de reference LAZY* :
+- `foundry/jhipster-gradle-plugins/` (pattern parent)
+- `foundry/engine/` (consommateur N3)
+- `office/books-collection/` (source PDFs)

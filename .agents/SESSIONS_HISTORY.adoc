@@ -1,0 +1,34 @@
+= SESSIONS_HISTORY — codex-gradle
+
+Historique des sessions de developpement du plugin codex-gradle.
+
+'''
+== Session 0 — Bootstrap gouvernance agent + scaffold
+
+*Date* : 2026-05-06
+*Type* : init
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : —
+
+*Objectif* :
+- Creer le projet Gradle codex-gradle dans foundry/
+- Mettre en place la gouvernance agent (.agents/)
+- Scaffolder le plugin doc-pipeline avec extractText
+
+*Livrables* :
+- Structure du projet (monorepo a builds independants)
+- Convention plugin buildSrc (JVM 25, plugin-publish)
+- Version catalog (pdfbox, tika, flexmark, asciidoctorj, jackson)
+- Plugin com.cheroliv.codex.doc-pipeline 0.1.0-SNAPSHOT
+- Task extractText (PDFBox, incrémentale)
+- Documentation canonique AUGMENTED_CONTEXT_PIPELINE.adoc
+- Gouvernance agent complete (6 fichiers .adoc)
+- Plan d'attaque PLAN_ATTAQUE_DOC_PIPELINE.adoc (racine workspace)
+- PIPELINE_MENTAL_MAP.adoc mis a jour (references vers codex-gradle)
+
+*Decisions clés* :
+- Codex est le contrat — pas de module doc-extractor separe
+- Version unique dans gradle.properties — zéro drift entre sous-projets
+- DAG N2 — importable par N3 engine/
+- Pattern jhipster-gradle-plugins comme modele architectural
+- Nom du recru : Codex

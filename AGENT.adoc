@@ -1,0 +1,106 @@
+= AGENT — codex-gradle
+:toc:
+
+_Date de creation_ : 2026-05-06
+_Derniere mise a jour_ : 2026-05-06
+_Projet_ : `foundry/codex-gradle/`
+_DAG_ : N2 — Plugin Gradle d'acquisition de documents (conformement a la Regle 4bis)
+
+'''
+== Regle 1 — COMMITS/GIT : INTERDICTION FORMELLE sans permission explicite
+
+*AUCUN commit, push, merge, amend, ou force push sans que l'utilisateur ait explicitement demande :*
+"commit", "commit and push", "c'est bon tu peux commit", ou formulation equivalente.
+Le script de build PEUT etre modifie en session active — le code PEUT tourner —
+mais RIEN ne doit etre persisté dans Git sans instruction humaine claire.
+Exception : les taches Gradle peuvent generer des fichiers dans `build/` (ignoré par .gitignore).
+
+'''
+== Regle 2 — PAS de publishToMavenLocal automatique
+
+`publishToMavenLocal` = publication locale. OK si explicitement demandé. JAMAIS implicite.
+
+'''
+== Regle 2bis — Classification Vision/Opinion/Stratégie
+
+Tout contenu genere ou modifie par le LLM DOIT etre classe epistemiquement :
+* `[VISION]` — speculations, futurs souhaités, intuitions sans implementation
+* `[OPINION]` — avis, critiques, hypothèses non validees
+* `[STRATEGIE]` — plans validés par execution, code compile, build vert
+
+PROMPT_REPRISE.adoc ne doit contenir AUCUNE section OPINION.
+Les sections VISION doivent etre taguées `[VISION]`.
+Les sections STRATEGIE sont les seules a pouvoir contenir des commandes Gradle pretes a executer.
+
+'''
+== Regle 3 — SECRETS via configuration/ — jamais en dur dans build.gradle.kts
+
+ZERO credential (API key, token, password, secret) dans `build.gradle.kts` ou `gradle.properties`.
+Tout parametre sensible remonte depuis `configuration/settings/` ou `configuration/.agents/`.
+
+'''
+== Regle 4 — Codex est le contrat
+
+Les types partages (BlockType, ExtractedBlock, ExtractedDocument, DocExtractor)
+vivent dans `codex-gradle/src/main/kotlin/`.
+Les sous-projets (codex-pdf, codex-epub) importent `codex` comme dependance via mavenLocal.
+Pas de module doc-extractor separe — `codex` est le contrat.
+
+'''
+== Regle 4bis — DAG : N2, publiable
+
+*IMPORTABLE par* : N3 engine/ (`assembleCompositeContext` → RAG pgvector enrichi)
+*IMPORTE* : N0 graphify-gradle (knowledge graph pour extraction d'entités)
+*Importe aussi* : `office/books-collection/` (source PDFs, jamais modifié)
+*Publie* : MavenLocal + Sonatype (Apache 2.0)
+*NE JAMAIS IMPORTER* : N3 engine/ (dependance cyclique interdite)
+
+'''
+== Mission
+
+Industrialiser l'acquisition de documents non-structurés (PDF, EPUB) pour alimenter
+la base de connaissance du pipeline d'augmentation de contexte :
+
+- `extractText` — extraction du texte brut structuré depuis un PDF
+  avec détection des titres via taille de police, blocs de code via fonte monospace
+- `convertToMarkdown` — conversion vers Markdown propre avec hiérarchie
+- `chunkDocument` — découpage sémantique par section
+- `exportKnowledgeBase` — export vers JSON-L / Markdown / AsciiDoc
+
+Sans Codex, le pipeline d'augmentation de contexte est borgne sur la connaissance
+livresque. Codex est le sens de la lecture du pipeline.
+
+'''
+== Portefeuille Transverse — Relations avec les autres agents
+
+|===
+| Projet | Niveau DAG | Relation
+| `graphify-gradle` | N0 | Fournit le knowledge graph pour extraction d'entités
+| `codebase-gradle` | N1 | Modèle métier SQL/DDD, templates .agents/
+| `engine/` | N3 | Consommateur final — RAG pgvector enrichi par codex
+| `plantuml-gradle` | N2 | Pair — diagrammes de la chaîne documentaire
+| `office/` | Zone 2 | Source des PDFs (`books-collection/`), jamais modifié
+|===
+
+'''
+== Fichiers du Projet
+
+|===
+| Fichier | Etat
+| `AGENT.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `.agents/INDEX.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `.agents/PROMPT_REPRISE.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `.agents/SESSION_PROCEDURE.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `.agents/SESSION_CHECKLIST.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `.agents/SESSIONS_HISTORY.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `AUGMENTED_CONTEXT_PIPELINE.adoc` | ✅ Spec canonique (1806 lignes)
+| `build.gradle.kts` | ✅ Squelette (readme + conventions)
+| `settings.gradle.kts` | ✅ rootProject.name = "codex-gradle"
+| `buildSrc/` | ✅ Convention plugin + version catalog
+| `doc-pipeline/build.gradle.kts` | ✅ Plugin com.cheroliv.codex.doc-pipeline
+| `doc-pipeline/src/` | ✅ CodexPlugin.kt + ExtractTextTask.kt
+|===
+
+[.text-right]
+*Document cree le 6 mai 2026 — Bootstrap gouvernance agent.*
+*Premier document de gouvernance de Codex.*

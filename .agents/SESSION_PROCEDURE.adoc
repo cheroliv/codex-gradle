@@ -1,0 +1,30 @@
+= SESSION_PROCEDURE — codex-gradle
+
+== Procedure de Fin de Session — 6 Etapes Obligatoires
+
+. *Rapport de session* — Creer `foundry/codex-gradle/.agents/sessions/NNN-sujet.adoc`
+. *Mise a jour PROMPT_REPRISE.adoc* — Contexte de reprise pour la session suivante
+. *Mise a jour INDEX.adoc* — Mettre a jour le numero de session, roadmap, etat des EPICs
+. *Mise a jour SESSIONS_HISTORY.adoc* — Ajouter l'entree dans l'historique
+. *Archivage COMPLETED_TASKS_ARCHIVE.adoc* — Archiver les taches terminees
+. *Verification* — Relire `.gitignore`, verifier aucun fichier sensible present
+
+== Commandes de Verification
+
+[source,shell]
+----
+# Verifier l'etat git
+git status
+
+# Verifier l'absence de secrets
+grep -r "TOKEN\|SECRET\|PASSWORD\|API_KEY" foundry/codex-gradle/ --include="*.kts" --include="*.properties"
+
+# Verifier que le build compile
+./gradlew :doc-pipeline:compileKotlin
+----
+
+== Rappels
+
+* Codex est le contrat — les types partagés vivent dans `codex/src/main/kotlin/`
+* Version unique dans `gradle.properties` — `codex.version=1.0.0`
+* DAG N2 — importable par N3 engine, jamais importe N3

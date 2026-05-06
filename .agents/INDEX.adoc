@@ -1,0 +1,73 @@
+= INDEX — codex-gradle
+:toc:
+
+_Regles absolues_ : voir `AGENT.adoc`
+_Ontologie spatiale_ : voir `configuration/.agents/AGENT_GOVERNANCE.adoc`
+_DAG_ : N2 — Plugin Gradle d'acquisition de documents (Regle 4bis)
+
+_Derniere mise a jour_ : 2026-05-06
+_Session en cours_ : 0 — bootstrap gouvernance agent codex + scaffold du plugin
+
+'''
+== REGLES ABSOLUES (resume)
+
+=== 1. COMMITS/GIT — INTERDICTION FORMELLE sans permission
+=== 2. PAS DE publishToMavenLocal automatique
+=== 3. SECRETS via configuration/ — jamais en dur dans build.gradle.kts
+=== 4. Codex est le contrat — types partages dans codex/
+=== 5. DAG N2 — importable par N3 engine, jamais importe N3
+=== 6. PROCEDURE DE FIN DE SESSION — 6 ETAPES OBLIGATOIRES
+
+'''
+== Sessions
+
+|===
+| # | Date | Type | Sujet | Score
+| 0 | 2026-05-06 | init | Bootstrap gouvernance agent codex + scaffold plugin | —
+|===
+
+'''
+== Roadmap — Etat Actuel
+
+|===
+| EPIC | Description | Statut | Priorite
+| CDX-0 | Bootstrap gouvernance agent codex | ✅ TERMINE | P0
+| CDX-1 | Task `extractText` fonctionnelle sur PDF test | A FAIRE | P0
+| CDX-2 | Détection typographique → hiérarchie de titres | A FAIRE | P0
+| CDX-3 | Task `convertToMarkdown` avec blocs de code | A FAIRE | P0
+| CDX-4 | Task `chunkDocument` — stratégie sémantique | A FAIRE | P0
+| CDX-5 | Task `exportKnowledgeBase` — JSON-L / Markdown / AsciiDoc | A FAIRE | P1
+| CDX-6 | Intégration arborescence OSS/CSS + routing licence | A FAIRE | P1
+| CDX-7 | Tests unitaires + intégration | A FAIRE | P1
+| CDX-8 | `codexIngest` → pgvector | A FAIRE | P2
+| CDX-9 | `codex-epub` — implémentation EPUB | A FAIRE | P3
+|===
+
+'''
+== Fichiers Associes
+
+|===
+| Fichier | Etat
+| `AGENT.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `.agents/INDEX.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `.agents/PROMPT_REPRISE.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `.agents/SESSION_PROCEDURE.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `.agents/SESSION_CHECKLIST.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `.agents/SESSIONS_HISTORY.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `AUGMENTED_CONTEXT_PIPELINE.adoc` | ✅ Spec canonique
+| `build.gradle.kts` | ✅ Plugin readme
+| `settings.gradle.kts` | ✅ rootProject + include doc-pipeline
+| `buildSrc/` | ✅ Convention plugin + catalog buildSrc
+| `doc-pipeline/build.gradle.kts` | ✅ Dependances + publication
+| `doc-pipeline/src/main/` | ✅ CodexPlugin.kt + ExtractTextTask.kt
+| `doc-pipeline/src/test/` | 🚧 Structure prête, tests a ecrire
+|===
+
+'''
+== Dependances Inter-Projets (DAG N2)
+
+|===
+| Projet importe | Niveau | Usage dans codex
+| `graphify-gradle` | N0 | Knowledge graph pour extraction d'entités depuis les chunks
+| `codebase-gradle` | N1 | Templates `.agents/`, modèle métier SQL/DDD
+|===
