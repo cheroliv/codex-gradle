@@ -1,0 +1,62 @@
+= Session 0 — Bootstrap gouvernance agent codex + scaffold plugin
+
+*Date* : 2026-05-06
+*Type* : init
+*Modele* : deepseek-v4-pro (via opencode)
+*Duree* : ~3h
+
+'''
+== Objectif
+
+Creer le projet Gradle codex-gradle, la nouvelle recrue experte en documentation.
+Mission : industrialiser l'acquisition de documents PDF/EPUB pour alimenter
+la base de connaissance (RAG pgvector) du pipeline d'augmentation de contexte.
+
+'''
+== Contexte
+
+A la suite du prompt `prompt_plan_attaque_doc_pipeline.md`, le plan d'attaque
+`PLAN_ATTAQUE_DOC_PIPELINE.adoc` a ete produit avec 7 etapes.
+Le projet a ete scaffoldé en suivant le pattern `jhipster-gradle-plugins`.
+
+Nom choisi pour le recru : *Codex*.
+
+'''
+== Ce qui a ete realise
+
+. Scaffold du projet `foundry/codex-gradle/` (monorepo a builds independants)
+. Convention plugin `codex.gradle-plugin-conventions` (buildSrc, JVM 25)
+. Version catalog: pdfbox 3.0.4, tika 3.1.0, flexmark 0.64.8, asciidoctorj 3.0.0
+. Plugin `com.cheroliv.codex.doc-pipeline` (version 0.1.0-SNAPSHOT)
+. Task `extractText` (PDFBox, incrémentale, InputFile/OutputFile)
+. Specification canonique `AUGMENTED_CONTEXT_PIPELINE.adoc` (1806 lignes) — fusion
+  de la version initiale + enrichissement section Codex (pattern monorepo documente)
+. Gouvernance agent complete : AGENT.adoc, INDEX, PROMPT_REPRISE, SESSION_PROCEDURE,
+  SESSION_CHECKLIST, SESSIONS_HISTORY
+. Mise a jour des references dans `PIPELINE_MENTAL_MAP.adoc`
+. Compilation reussie : `./gradlew :doc-pipeline:compileKotlin` → BUILD SUCCESSFUL
+
+'''
+== Decisions cles
+
+- Codex est le contrat — pas de module `doc-extractor` separe
+- Version unique dans `gradle.properties` — zero drift entre sous-projets
+- DAG N2 — importable par N3 engine/ pour enrichir pgvector
+- Pattern jhipster-gradle-plugins comme reference architecturale
+- JVM 25 (adapte a l'environnement existant, JDK Temurin-25.0.3)
+
+'''
+== Prochaine etape
+
+*CDX-1* — Tester `extractText` sur un PDF de `office/books-collection/__courses__/kotlin/`.
+Objectif : valider que l'extraction PDFBox fonctionne en conditions reelles.
+
+'''
+== Verification post-session
+
+- [x] Build Gradle compile
+- [x] Gouvernance agent en place (6 fichiers)
+- [x] Spec canonique dans le projet
+- [x] .gitignore verifie (pas de secrets, pas de build/)
+- [x] 2 commits dans codex-gradle (scaffold + governance)
+- [x] References externes mises a jour (PIPELINE_MENTAL_MAP.adoc)
