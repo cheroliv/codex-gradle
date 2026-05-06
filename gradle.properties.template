@@ -1,0 +1,10 @@
+# Gradle Plugin Portal — credentials (NE PAS COMMITTER — dans .gitignore)
+# Obtenir sur https://plugins.gradle.org/ → API Keys
+# gradle.publish.key=<votre-clé>
+# gradle.publish.secret=<votre-secret>
+
+# Options JVM pour le build
+org.gradle.jvmargs=-Xmx2g -XX:+HeapDumpOnOutOfMemoryError
+org.gradle.parallel=true
+org.gradle.caching=true
+org.gradle.configuration-cache=true

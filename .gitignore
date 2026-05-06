@@ -1,0 +1,16 @@
+# Gradle
+.gradle/
+build/
+**/build/
+!src/**/build/
+
+.kotlin
+
+# Plugin Portal credentials — ne jamais committer
+gradle.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.class

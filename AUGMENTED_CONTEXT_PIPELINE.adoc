@@ -1,0 +1,1816 @@
+= AUGMENTED CONTEXT PIPELINE — Le Pipeline d'Augmentation de Contexte Comme Vrai Produit
+:toc: left
+:toclevels: 4
+:icons: font
+:sectnums:
+:author: cheroliv + opencode (deepseek-v4-pro)
+:date: 2026-05-06
+
+[abstract]
+--
+Ce document est le **cinquième document du jardin secret**. Il formalise la thèse
+centrale que les trois changements successifs de définition du MVP0 (de
+PlantUML SaaS → Anonymiseur → Capsule Vidéo → Employé Synthétique) masquaient
+un acteur plus fondamental : le **pipeline d'injection de contexte augmenté**
+lui-même.
+
+.La thèse :
+_le produit n'est ni un SaaS, ni un plugin, ni une clé USB, ni une
+capsule vidéo. Le produit est la capacité à ouvrir une conversation LLM —
+via n'importe quel outil de prompt engineering (opencode, Claude Code, Cursor,
+Copilot) — dont le contexte est déjà augmenté par le vecteur composite
+(RAG + Knowledge Graph + Modèle Métier SQL), sans jamais altérer l'outil
+lui-même. Le canal de communication est le stdout, le contrat est la tâche
+Gradle typée, le pont est LangChain4j._
+
+Ce document capture l'essence intrinsèque du workspace en mai 2026 — son stade
+actuel de développement, sa contradiction motrice, et la voie de résolution.
+
+*Pour une carte mentale synthétique (lecture 3 minutes, alignement rapide) :*
+`PIPELINE_MENTAL_MAP.adoc` — le sixième document du jardin secret.
+--
+
+== Introduction — Les Trois MVP0 et l'Acteur Caché
+
+=== Le symptôme
+
+Depuis le 1er mai 2026, la définition du "MVP0" — le premier produit vendable —
+a changé trois fois :
+
+. *MVP0 = PlantUML SaaS* (v6) : un utilisateur paie, un diagramme est généré sur
+  son repo GitHub. Priorité 0 = Stripe + OAuth. Le SaaS d'abord.
+. *MVP0 = Capsule Vidéo* (v7) : le slider + TTS + FFmpeg → MP4. Priorité 0 =
+  contenu pour soi avant le SaaS pour autrui. Le plugin d'abord.
+. *MVP0 = Anonymiseur* (v15) : détection PII → datasets propres. Priorité 0 =
+  nettoyage des données avant tout RAG. La donnée d'abord.
+
+Puis une quatrième couche s'est ajoutée : l'Employé Synthétique par Silo de
+Raffinement — fine-tuning incrémental sur bounded context DDD client.
+
+Ces quatre définitions sont **toutes correctes**. Chacune capture une couche
+réelle du produit. Mais aucune ne capture la couche **qui rend les trois autres
+possibles** : le mécanisme par lequel le LLM accède au contexte augmenté sans
+que l'outil de prompt engineering soit modifié.
+
+=== Le diagnostic
+
+Ce qui rend les quatre couches possibles, c'est une infrastructure commune :
+
+. Un utilisateur (développeur, formateur, stagiaire) ouvre un outil de prompt
+  engineering — opencode, Claude Code, Cursor, ou Copilot
+. Le contexte de cet outil est **déjà augmenté** par le vecteur composite :
+  RAG pgvector (similarité sémantique), Knowledge Graph Graphify (relations
+  exactes), Modèle Métier SQL (DDD)
+. Cette augmentation n'est pas faite par un plugin de l'outil — elle est faite
+  par un **pipeline Gradle externe** qui injecte le contexte via stdout
+. L'outil de prompt engineering n'est **jamais altéré**. Pas de fork, pas de
+  plugin custom, pas d'extension propriétaire. Il consomme le contexte comme
+  il consommerait n'importe quel stdout
+. Le contrat entre le pipeline et l'outil est la **tâche Gradle typée** —
+  paramètres validés à la compilation, output structuré, reproductible
+
+C'est cette infrastructure qui est le **vrai produit**. Elle est le capital
+fixe qui médiatise le vibecoding. Elle est antérieure à Edster, antérieure
+à la capsule vidéo, antérieure à l'anonymiseur — elle les rend possibles
+et les unifie.
+
+=== La contradiction
+
+Le workspace, par son propre développement, se heurte à ce que Gramsci appelle
+l'équilibre instable des forces : les quatre couches produit (plugins,
+capsule vidéo, SaaS, employé synthétique) sont des forces centrifuges qui
+tirent le développement dans quatre directions. Mais le **capital fixe**
+— le pipeline d'augmentation de contexte — est la force centripète qui
+les maintient dans la même orbite.
+
+La contradiction est la suivante : le pipeline est déjà opérationnel
+(les plugins Gradle tournent, LangChain4j est intégré, le RAG est fonctionnel),
+mais il n'est **pas encore packagé comme un produit conscient de lui-même**.
+Il est le sol sur lequel les quatre autres couches marchent, mais il n'a pas
+encore de nom, pas de spécification, pas de priorité propre.
+
+Ce document résout cette contradiction en **donnant un nom et une priorité
+absolue** au pipeline lui-même.
+
+== Le Canal de Communication : stdout comme Protocole Universel
+
+=== Le principe
+
+Toute conversation entre un outil de prompt engineering et le pipeline
+d'augmentation de contexte passe par un canal unique : **stdout**.
+
+Ce choix n'est pas une limitation technique. C'est un choix architectural
+délibéré qui garantit :
+
+*Compatibilité universelle* ::
+Tout outil de prompt engineering sait lire stdout. opencode lit stdout.
+Claude Code lit stdout. Cursor lit stdout. Copilot lit stdout. Un terminal
+humain lit stdout. Zéro intégration spécifique par outil.
+
+*Zéro altération de l'outil* ::
+Le pipeline ne modifie pas l'outil. Il ne lui injecte pas de plugin. Il ne
+patche pas son runtime. Il ne hook pas ses APIs internes. Il émet sur stdout,
+et l'outil consomme ce stdout comme il consommerait la sortie de n'importe
+quelle commande shell.
+
+*Déterministe et testable* ::
+stdout est un flux de bytes. On peut le capturer, le parser, le valider,
+le comparer entre deux runs. C'est le format le plus simple et le plus robuste
+pour un contrat d'interface.
+
+*Fonctionne en local et en CI/CD* ::
+En local, stdout est immédiat. En CI/CD, stdout est le log du workflow.
+Le même format, le même contrat, deux contextes d'exécution, zéro adaptation.
+
+=== Les deux modes d'invocation
+
+Le pipeline peut être invoqué selon deux modes, qui partagent le même canal
+de sortie (stdout) mais diffèrent par leur mode de déclenchement :
+
+==== Mode 1 — Invocation Directe par Tool LLM (Local)
+
+[source]
+----
+UTILISATEUR (dans opencode)
+    │  "Analyse le module auth et suggère des corrections"
+    ▼
+GEMMA 4 (orchestrateur opencode)
+    │  Thinking: décomposer → choisir tâche Gradle appropriée
+    ▼
+OPEncode LANCE UNE TÂCHE GRADLE (via tool use)
+    │  ./gradlew analyzeCode -Ptarget=auth-module
+    ▼
+PLUGIN GRADLE (Kotlin, LangChain4j)
+    ├── Prépare le contexte : RAG pgvector → documents pertinents
+    ├── Prépare le knowledge graph : Graphify → relations exactes
+    ├── Assemble le vecteur composite : RAG + KG + SQL DDD
+    ├── Appelle DeepSeek-v4-pro via LangChain4j avec le vecteur composite
+    └── Parse la réponse → stdout structuré (JSON lines)
+    ▼
+OPEncode LIT LE STDOUT
+    │  Le résultat apparaît dans la sortie standard de la session
+    ▼
+GEMMA 4 (orchestrateur opencode)
+    │  Parse le stdout, visualise l'état, décide de la prochaine action
+    ▼
+UTILISATEUR
+    "Voici l'analyse. Problème détecté : dépendance circulaire dans auth-module.
+    Suggestion : extraire l'interface en module séparé. Lancer ./gradlew refacto ?"
+----
+
+Dans ce mode :
+* L'utilisateur ne quitte jamais opencode
+* Le LLM (Gemma 4) ne génère pas le code complexe — il route vers la tâche Gradle
+* La tâche Gradle encapsule l'appel à DeepSeek-v4-pro avec le contexte augmenté
+* Le résultat remonte en stdout, parsé par Gemma 4, affiché à l'utilisateur
+* opencode n'est **pas modifié** — il utilise son mécanisme natif de tool use
+  pour lancer `./gradlew`, exactement comme il lancerait `ls` ou `git status`
+
+==== Mode 2 — Invocation par Stimulus CI/CD (Distant)
+
+[source]
+----
+UTILISATEUR ou TRIGGER AUTOMATIQUE
+    │  Commit poussé, PR ouverte, workflow_dispatch manuel
+    ▼
+GITHUB ACTIONS (ou GitLab CI, Gitea Actions)
+    │  Le workflow est déclenché
+    ▼
+RUNNER EXÉCUTE LA TÂCHE GRADLE
+    │  ./gradlew analyzeCode -Ptarget=auth-module
+    ▼
+PLUGIN GRADLE (Kotlin, LangChain4j)
+    ├── Même pipeline que le mode 1 :
+    ├── RAG pgvector + Graphify + SQL DDD → vecteur composite
+    ├── Appel DeepSeek-v4-pro via LangChain4j
+    └── stdout structuré (JSON lines)
+    ▼
+CI/CD CAPTURE LE STDOUT COMME LOG DE WORKFLOW
+    │  Le stdout est l'artefact principal du job
+    ▼
+STIMULUS DE COMMUNICATION
+    │  Le développeur, dans sa session opencode, déclenche :
+    │  "Récupère l'output du dernier workflow sur auth-module"
+    ▼
+OPEncode LIT LE STDOUT DU WORKFLOW
+    │  Via gh run view --log, ou via l'API GitHub, ou via un fichier artifacts
+    │  Le résultat apparaît dans la sortie standard de la session opencode
+    ▼
+GEMMA 4 (orchestrateur opencode)
+    │  Parse, visualise, décide de la suite
+    ▼
+UTILISATEUR
+    "Workflow #42 terminé. Analyse complète dispo. Erreur identifiée, correctif
+    suggéré dans le job log. Lancer le correctif ?"
+----
+
+Dans ce mode :
+* Le déclenchement est un événement CI/CD (push, PR, schedule, dispatch)
+* Le pipeline tourne sur un runner distant (GitHub Actions, infrastructure client)
+* Le stdout est le log du job — l'artefact public du workflow
+* Le développeur, dans sa session opencode, récupère ce stdout par un
+  mécanisme de **stimulus** — une commande explicite ou un hook automatique
+* La même augmentation de contexte, le même vecteur composite, mais le
+  résultat est consommé **en différé** plutôt qu'en temps réel
+
+=== Les trois modes sont le même produit, avec des réceptivités différentes
+
+La différence entre les modes n'est pas une différence de produit.
+C'est une différence de **réceptivité** — comment et quand le résultat
+est consommé. Le contrat est identique : tâche Gradle typée → LangChain4j →
+DeepSeek → stdout structuré. Mais chaque mode d'exécution a une capacité de
+communication différente. Rien ne garantit l'interception synchrone.
+Le plus bas dénominateur commun est le **mode asynchrone par commit + push**.
+
+==== Mode 1 — Local Gradle (Synchrone)
+
+[source]
+----
+opencode ──→ ./gradlew decomposeIntention -Pintention="..."
+               │
+               ▼  (même processus, stdout immédiat)
+           [PLAN] EPIC-0: Skeleton (3 pts)
+           [PLAN] EPIC-1: TTS integration (8 pts)
+           ...
+               │
+               ▼
+opencode lit le stdout en temps réel
+→ l'humain valide ou corrige
+----
+
+*Réceptivité* : synchrone totale. Le stdout est lu immédiatement
+par le processus appelant. Pas de latence, pas de perte.
+Le LLM (Gemma 4) parse le stdout et visualise pour l'humain.
+
+*Contrainte* : nécessite que l'humain soit devant opencode.
+Ne scale pas en autonomie.
+
+==== Mode 2 — CI/CD Runner (Asynchrone par Commit + Push, Semi-Interactif)
+
+[source]
+----
+GITHUB ACTIONS (trigger: push, schedule, workflow_dispatch)
+    │
+    ▼
+RUNNER exécute ./gradlew decomposeIntention -Pintention="..."
+    │
+    │  ⚠ PENDANT LE RUN, le runner PEUT être sensible aux push entrants
+    │  (git fetch en boucle, polling léger)
+    │
+    ▼  (le stdout est le log du job — écoutable de l'extérieur)
+LE PLUGIN GÉNÈRE LE PLAN → ÉCRIT LE FICHIER → COMMIT → PUSH
+    │
+    ▼
+LE COMMIT EST LE SIGNAL
+    │  "feat(plan): EPIC-0→4 pour capsule-video (21 pts)"
+    │  Le git log devient l'historique des décisions
+    │
+    ▼
+LE DÉVELOPPEUR (ou l'agent suivant)
+    │  git pull → lit le commit → parse le plan → décide de la suite
+    │
+    ▼
+opencode (réactif) : "Un nouveau plan a été commité. L'exécuter ?"
+----
+
+*Réceptivité* : asynchrone par commit + push, avec fenêtre de stimulation.
+Le runner a deux visages :
+. *Écoutable* — ses logs stdout/stderr sont lisibles en temps réel
+  depuis l'extérieur (GitHub UI, `gh run watch`, API)
+. *Semi-interactif* — dans son contexte d'exécution (le temps de vie du runner),
+  le runner peut être sensible aux push entrants. Un `git fetch` en boucle
+  permet à un autre agent de committer une instruction PENDANT que le runner
+  tourne. Ce n'est pas une conversation continue — c'est une fenêtre de
+  stimulation bornée par la durée du run.
+
+*Limite fondamentale* : le runner n'a pas de boucle conversationnelle dans
+son contexte d'exécution. Il peut juste recevoir des stimuli (commits) dans
+sa fenêtre de vie et ajuster. Passé le timeout, le runner meurt. La seule
+mémoire persistante est le commit.
+
+==== Le Commit + Push Comme Protocole de Communication Asynchrone Universel
+
+Le commit + push est le seul protocole qui fonctionne dans TOUS les modes :
+local (git log), CI/CD (workflow → push), distant (autre machine),
+cross-agent (agent A commit, agent B pull). Zéro middleware. Zéro queue.
+Zéro webhook obligatoire. Juste Git.
+
+*Pas de configuration* ::
+Pas de webhook à enregistrer. Pas de secret à partager. Pas d'URL de callback.
+Git push fonctionne partout, tout le temps, sans setup.
+
+*Pas de perte de message* ::
+Un webhook peut échouer si le receiver est down. Un commit est persistant —
+il attend dans le repo que quelqu'un le pull. Pas de timeout, pas de retry.
+
+*Audit intégré* ::
+L'historique Git est l'historique des décisions. Qui a généré quoi, quand,
+avec quel modèle, en combien de temps. Impossible à falsifier (SHA chain).
+
+*Double lisibilité* ::
+Le sujet du commit est pour l'humain. Le corps du commit est pour la machine
+(JSON structuré). Les deux coexistent dans le même artefact.
+
+*Boucle automatique* ::
+Un push peut déclencher un nouveau workflow GitHub Actions (via `on: push`).
+Le commit de sortie d'une tâche devient le déclencheur de la tâche suivante.
+
+Convention de commit pour les tâches du pipeline :
+
+[source]
+----
+<type>(<scope>): <description>
+
+[PLAN]
+EPIC-0: Skeleton Gradle (3 pts)
+EPIC-1: TTS integration (8 pts)
+...
+
+[STATUS]
+executed_by: ci-runner-42
+model: deepseek-v4-pro
+mode: MAX_THINK
+duration_ms: 127043
+timestamp: 2026-05-06T14:32:01Z
+----
+
+Le corps du commit contient le payload structuré. Le sujet est le résumé
+lisible par l'humain. Le SHA est l'identifiant unique du message.
+
+==== Les Trois Niveaux d'Asynchronie que Git Absorbe Naturellement
+
+. *Asynchronie temporelle* — le runner exécute à 3h du matin (cron),
+   le dev lit le résultat à 9h. Le commit attend.
+. *Asynchronie spatiale* — le runner est sur GitHub Actions (US),
+   le dev est en France. Le push traverse l'Atlantique.
+. *Asynchronie outil* — le runner utilise Gradle, le dev utilise opencode,
+   l'agent FPA utilise LangChain4j. Tous lisent Git. Aucun ne dépend
+   du protocole des autres.
+
+==== Topologie des Canaux — Qui Parle à Qui et Comment
+
+[plantuml]
+----
+@startuml
+skinparam backgroundColor transparent
+skinparam componentStyle rectangle
+
+title Topologie des Canaux — Réceptivité par Mode d'Exécution
+
+left to right direction
+
+rectangle "CANAL SYNCHRONE\n(stdout temps réel)" as sync #C8E6C9 {
+    [opencode\n(Gemma 4)] as oc_sync
+    [Terminal\n(./gradlew)] as term
+}
+
+rectangle "CANAL ASYNCHRONE\n(commit + push)" as async #FFCDD2 {
+    [GitHub Actions\n(runner CI)] as ga
+    [Agent distant\n(autre machine)] as agent_dist
+}
+
+rectangle "PROTOCOLE UNIQUE\nGit commit + push" as git_proto #FFF3E0 {
+    [git commit\nmessage = signal]
+    [git push\ntransmission]
+    [git log\nhistorique]
+    [git diff\ncontenu lisible]
+}
+
+rectangle "POINTS D'ÉCOUTE" as listen #E3F2FD {
+    [opencode\n(git pull / gh CLI)] as oc_listen
+    [Autre agent\n(git pull → parse)] as agent_listen
+    [Dashboard\n(git log → état)] as dashboard_listen
+}
+
+oc_sync --> term : "tool use\n./gradlew <tache>"
+term --> oc_sync : "stdout\n[PLAN] [RESULT]"
+
+ga --> git_proto : "écrit le résultat\n→ commit → push"
+agent_dist --> git_proto : "écrit le résultat\n→ commit → push"
+
+git_proto --> oc_listen : "pull → parse"
+git_proto --> agent_listen : "pull → parse"
+git_proto --> dashboard_listen : "log → état"
+
+note bottom of git_proto
+  Le commit + push est le seul
+  protocole qui fonctionne
+  dans TOUS les modes.
+  Zéro middleware.
+  Juste Git.
+end note
+@enduml
+----
+
+== Le Vecteur Composite de Contexte — La Matière Première de l'Augmentation
+
+=== Structure
+
+Le vecteur composite est l'assemblage de trois composantes de contexte que
+la tâche Gradle injecte dans le prompt envoyé au LLM lourd (DeepSeek-v4-pro) :
+
+[cols="1,2,2,3", options="header"]
+|===
+| Composante | Source | Outil | Apport
+| **RAG pgvector** | `office/` (data pédagogique) + `OSS/`
+(code source public) | Embeddings ONNX (AllMiniLmL6V2) + PostgreSQL pgvector |
+*Similarité sémantique* — le "flou productif" qui trouve les documents
+pertinents même sans mot-clé exact
+| **Knowledge Graph** | `graph.json` (produit par graphify-gradle
+sur tout l'écosystème) | Graphify : nœuds (fichiers, projets), arêtes
+(imports, dépendances, références), communautés | *Relations exactes* —
+le déterministe structurant qui montre comment les composants se connectent
+| **Modèle Métier SQL** | DDL (schéma entité-relation) → bounded
+contexts DDD | Parser SQL → extraction des agrégats, value objects, entités |
+*Domaine métier* — la "troisième voie de contexte" qui donne au LLM la
+structure du métier du client
+|===
+
+=== Assemblage dans la tâche Gradle
+
+[source,kotlin]
+----
+// Pseudo-code de la tâche Gradle qui assemble le vecteur composite
+tasks.register<AnalyzeCodeTask>("analyzeCode") {
+    target.set(project.findProperty("target") as String)
+
+    doLast {
+        // 1. RAG — chercher les documents pertinents par similarité
+        val ragContext = pgvector.query(
+            embedding = onnx.embed(query),
+            topK = 10,
+            filter = ZoneFilter(Zone.OSS + Zone.OFFICE_VISION)
+        )
+
+        // 2. Knowledge Graph — naviguer les relations exactes
+        val kgContext = graphify.query(
+            predicate = "node.path CONTAINS '$target'",
+            depth = 2,  // voisins jusqu'à distance 2
+            edgeTypes = listOf("imports", "depends_on", "references")
+        )
+
+        // 3. Modèle Métier SQL — extraire les bounded contexts
+        val dddContext = sqlParser.extractBoundedContexts(
+            ddl = schemaContent,
+            target = target
+        )
+
+        // 4. Assemblage du vecteur composite
+        val compositeContext = CompositeContext(
+            rag = ragContext,       // similarité sémantique
+            knowledgeGraph = kgContext,  // relations exactes
+            domainModel = dddContext     // modèle métier DDD
+        )
+
+        // 5. Injection dans le prompt LangChain4j
+        val prompt = PromptTemplate.from("""
+            Contexte augmenté :
+            {{compositeContext}}
+
+            Tâche : {{userRequest}}
+        """).apply(compositeContext).apply(userRequest)
+
+        // 6. Appel au LLM lourd avec contexte augmenté
+        val response = deepseek.generate(prompt)
+
+        // 7. Sortie en stdout structuré
+        println("[CTX] composite_vector_size=${compositeContext.size}")
+        println("[DS_STATUS] ${response.metadata}")
+        println(response.content)
+    }
+}
+----
+
+=== Ce que le vecteur composite permet
+
+*Pas de recherche manuelle* ::
+Le développeur ne fait pas de `grep`, de `find`, de navigation dans l'arborescence.
+La tâche Gradle a déjà trouvé les 10 documents les plus pertinents, les 20 relations
+de dépendance critiques, et le bounded context DDD du module cible.
+
+*Contexte ancré et vérifiable* ::
+Le RAG est ancré sur les documents réels du workspace — pas sur une hallucination.
+Le knowledge graph est produit par un parseur déterministe — pas par un LLM.
+Le modèle métier SQL est le schéma réel de la base — pas une spéculation.
+
+*Économie de tokens massive* ::
+Le vecteur composite remplace 500+ lignes de contexte EAGER/LAZY par ~50 tokens
+ciblés. Ratio d'économie documenté : 71x (v10, EPIC 9).
+
+*Transférable entre projets* ::
+Le même vecteur composite, assemblé par les mêmes tâches Gradle, peut être injecté
+dans opencode, dans un plugin slider-gradle, dans un pipeline CI/CD, ou dans le
+futur SaaS Edster. Le contrat est le stdout. Le format est JSON lines. Le pont
+est LangChain4j.
+
+== Les Deux Acteurs du Pipeline
+
+=== Acteur 1 — Le Cerveau Léger (Orchestrateur Local)
+
+L'orchestrateur est un petit modèle rapide (Gemma 4 E4B, 4.5B effectif) qui tourne
+dans l'outil de prompt engineering (opencode).
+
+Son rôle :
+* Router les requêtes utilisateur vers la tâche Gradle appropriée
+* Lancer `./gradlew <tâche>` via le mécanisme natif de tool use de l'outil
+* Parser le stdout de la tâche
+* Visualiser l'état et le résultat à l'utilisateur
+* Décider de la prochaine action (thinking mode)
+
+Ce qu'il ne fait **pas** :
+* Générer du code complexe
+* Analyser en profondeur
+* Synthétiser des informations cross-projets
+* Maintenir le contexte EAGER/LAZY au-delà du strict nécessaire
+
+=== Acteur 2 — Le Cerveau Lourd (Exécuteur via LangChain4j)
+
+L'exécuteur est un gros modèle frontalier (DeepSeek-v4-pro, 49B activés, 1M contexte)
+qui tourne sur Ollama Cloud et est appelé **depuis le plugin Gradle** via LangChain4j.
+
+Son rôle :
+* Générer du code complexe (refacto, nouveaux endpoints, tests)
+* Analyser l'architecture en profondeur (dépendances, patterns, anti-patterns)
+* Synthétiser des informations multi-fichiers, multi-projets
+* Corriger des bugs non triviaux avec analyse de stacktrace
+
+Ce qu'il ne fait **pas** :
+* Interagir directement avec l'utilisateur
+* Décider quelle tâche lancer — c'est le rôle de Gemma 4
+* Servir du HTML ou du markup UI — c'est le rôle des templates Kotlin
+
+=== La relation entre les deux
+
+[plantuml]
+----
+@startuml
+skinparam backgroundColor transparent
+skinparam componentStyle rectangle
+
+rectangle "OPEncode (Gemma 4 E4B)" as opencode #LightGreen {
+    [Conversation fluide]
+    [Routage intelligent]
+    [Visualisation résultats]
+}
+
+rectangle "Tâche Gradle (Kotlin)" as gradle #LightBlue {
+    [Assemblage vecteur composite]
+    [Appel LangChain4j]
+    [Parsing réponse]
+}
+
+cloud "Ollama Cloud" as cloud #LightPink {
+    [DeepSeek-v4-pro]
+}
+
+database "PostgreSQL + pgvector" as pg #LightYellow {
+    [Embeddings ONNX]
+    [Knowledge Graph]
+    [Modèle métier SQL]
+}
+
+opencode --> gradle : "./gradlew <tâche>"
+gradle --> pg : "Requête composite\n(RAG + KG + SQL)"
+pg --> gradle : "Contexte augmenté"
+gradle --> cloud : "Prompt avec\ncontexte augmenté"
+cloud --> gradle : "Réponse générée"
+gradle --> opencode : "stdout structuré"
+@enduml
+----
+
+== Pourquoi CECI est le Vrai Produit
+
+=== Antériorité logique
+
+Le pipeline d'augmentation de contexte est **logiquement antérieur** à toutes les
+autres couches produit :
+
+* Sans pipeline, les plugins Gradle sont des transformateurs sans contexte —
+  ils transforment mais ne comprennent pas *quoi*
+* Sans pipeline, la capsule vidéo génère des slides sans savoir quel matériel
+  pédagogique existe dans `office/`
+* Sans pipeline, le SaaS Edster provisionne des workspaces vides — des coquilles
+  sans contenu augmenté
+* Sans pipeline, l'employé synthétique ne peut pas être fine-tuné sur le bounded
+  context DDD du client — il n'a pas de mécanisme d'observation du domaine
+
+Le pipeline est la **condition de possibilité** des quatre couches. Il ne les
+remplace pas — il les rend possibles. Et parce qu'il les rend possibles, il est
+le produit le plus fondamental.
+
+=== Universalité de l'outillage
+
+Le pipeline ne dépend d'aucun outil de prompt engineering spécifique :
+
+| Outil | Comment il consomme le pipeline |
+| opencode | `./gradlew <tâche>` via tool use natif → stdout |
+| Claude Code | `./gradlew <tâche>` via bash tool → stdout |
+| Cursor | Terminal intégré → `./gradlew <tâche>` → stdout |
+| Copilot | Terminal ou CI/CD → `./gradlew <tâche>` → stdout |
+| Terminal humain | `./gradlew <tâche>` → stdout lu par l'humain |
+
+Le contrat est le même partout : une commande shell, un stdout structuré, zéro
+intégration spécifique. Le pipeline ne fait pas de favoritisme. Il émet sur stdout,
+et tout outil capable de lancer une commande shell peut le consommer.
+
+Cette universalité est un **argument commercial massif** :
+* Pas de vendor lock-in sur l'outil de prompt engineering
+* Pas de migration si l'utilisateur change d'outil
+* Pas de courbe d'apprentissage — `./gradlew <tâche>` est la seule commande
+* Zéro configuration par outil — le pipeline est un exécutable, pas un plugin
+
+=== Le capital fixe comme produit
+
+Dans la dialectique matérialiste, le capital fixe est le moyen de production qui
+ne se consomme pas dans l'acte productif — il le médiatise et le rend possible.
+La machine-outil qui usine les pièces. Le pipeline CI/CD qui build le code.
+
+Le pipeline d'augmentation de contexte est le **capital fixe** du vibecoding :
+
+* Il ne génère pas le code — il **prépare les conditions** pour que le LLM
+  puisse le générer correctement
+* Il ne publie pas le contenu — il **structure le contexte** pour que le
+  contenu généré soit pertinent
+* Il ne facture pas le client — il **rend le service tellement utile** que
+  le client veut payer pour y accéder
+
+La valeur du capital fixe ne se mesure pas à sa consommation (combien de tokens
+le pipeline utilise), mais à sa **productivité marginale** (combien de valeur
+chaque appel au LLM produit grâce au contexte augmenté). C'est la différence entre :
+
+* "Écris un microservice de gestion de commandes" → 50% de code pertinent
+* "Écris un microservice de gestion de commandes [avec contexte : voici les
+  10 fichiers les plus pertinents + le graphe de dépendances + le modèle métier
+  SQL du domaine commandes]" → 95% de code pertinent
+
+Le pipeline transforme le rendement du LLM sans consommer plus de compute LLM.
+C'est la définition même de la productivité du capital.
+
+=== Convergence de canaux
+
+Le pipeline est le **point de convergence** de tous les canaux de développement
+identifiés dans l'architecture :
+
+[source]
+----
+CANAL EAGER/LAZY (contexte statique, chargé en début de session)
+    └→ Limité à ~800 tokens, figé, pas de mise à jour en cours de session
+
+CANAL RAG (contexte dynamique, chargé à la demande)
+    └→ Requêtes vectorielles sur pgvector, embedding ONNX
+
+CANAL GRAPHIFY (contexte structurel, relations exactes)
+    └→ Knowledge graph transverse, requêtable, navigable
+
+CANAL CI/CD (contexte distant, asynchrone)
+    └→ Logs de workflow, artifacts, statuts de build
+                           │
+    Tous les canaux ──────►│
+                           ▼
+            VECTEUR COMPOSITE (assemblé par tâche Gradle)
+                           │
+                           ▼
+            LANGCHAIN4J → pro prompt → DeepSeek-v4-pro
+                           │
+                           ▼
+            STDOUT (consommable par tout outil)
+----
+
+Avant le pipeline, chaque canal est un silo. Le EAGER/LAZY ne sait pas ce que le
+RAG a trouvé. Le RAG ne sait pas ce que Graphify a structuré. Le CI/CD ne sait pas
+que l'utilisateur est en train de travailler sur le même module en local.
+
+Avec le pipeline, les quatre canaux convergent dans le vecteur composite, qui est
+**injecté dans un seul prompt** au LLM lourd. Le LLM ne voit pas quatre sources
+de contexte partielles — il voit **un système unifié** dont la structure lui
+indique ce qu'il doit faire ensuite.
+
+== État Actuel du Pipeline (Mai 2026)
+
+=== Ce qui est déjà construit et fonctionnel
+
+[cols="1,2,3,2", options="header"]
+|===
+| Composant | Statut | Détail | Sessions
+| **Gradle comme noyau agentique** | ✅ Production | Tâches fortement typées, Kotlin
+DSL, contrats validés à la compilation, 5 plugins publiés sur le Portal | 150+
+| **LangChain4j intégré** | ✅ Production | Interface unifiée multi-provider (7
+providers LLM), `ChatModel`, `AiServices`, retry/fallback/circuit breaker | Intégré
+dans plantuml-gradle + slider-gradle
+| **RAG pgvector** | ✅ Production | Embeddings ONNX (AllMiniLmL6V2), indexation
+office/ + OSS/, requêtage vectoriel via LangChain4j | slider-gradle (4 providers),
+plantuml-gradle (7 providers)
+| **Knowledge Graph Graphify** | ✅ Production | 109 tests, 380/380 PASS,
+détection auto format (legacy, graphify natif, flat), filtrage par communauté/type
+d'arête/confiance, pipeline déterministe + pipeline LLM-assisté | 138 sessions
+plantuml-gradle
+| **Modèle métier SQL ↔ DDD** | ✅ Existant | JSON Schemas draft-07 (formation,
+user, evaluation, ressource_pedagogique, remediation, satisfaction),
+`spg.csv` canonique, taxonomie Bloom EN+FR | data-engineering/
+| **Pattern consommation plugin** | ✅ Production | Clone → `publishToMavenLocal`
+→ `./gradlew <tâche>` — pattern documenté dans `DOGFOODING_ARCHITECTURE.adoc` |
+Tous les plugins
+| **Image Docker double usage** | ✅ Production | Runner CI/CD + outil terrain
+FTTH, publiée sur DockerHub | magic_stick (64+ sessions)
+| **Audit repos** | ✅ Terminé | 41 dépôts candidats contexte augmenté, 12 bruit,
+classés dans `AUDIT_BUSINESS_LOGIC_REPOSITORIES.adoc` | engine/
+|===
+
+=== Ce qui est partiellement construit
+
+[cols="1,2,3,2", options="header"]
+|===
+| Composant | Statut | Détail | Bloquant
+| **Vecteur composite assemblé** | 🚧 Partiel | Chaque plugin assemble *sa*
+composante (RAG, KG, SQL) indépendamment. Aucune tâche Gradle ne les assemble
+**toutes les trois** dans un vecteur composite unifié avant l'appel LLM | Tâche
+`assembleCompositeContext` à créer dans engine/
+| **graphify-gradle transverse** | 🚧 Cadré | Plugin créé, refactor de la logique
+Graphify depuis plantuml-gradle, 42 pts roadmap MVP, gouvernance agent en place |
+Code à écrire — US-GF1→GF10
+| **Canal stdout structuré** | 🚧 Partiel | Chaque plugin logue en stdout mais
+pas de format unifié `[CTX]` / `[DS_STATUS]` / `[RESULT]` partagé entre tous |
+Spécification du format stdout à formaliser
+| **Mode stimulus CI/CD** | 🚧 Inexistant | Le développeur ne peut pas récupérer
+le stdout d'un workflow distant dans sa session opencode actuelle | Mécanisme
+de récupération à implémenter (gh CLI, artifacts API, webhook local)
+| **OPEncode avec Gemma 4 E4B** | 🚧 Spécifié | Architecture documentée dans
+`OPEncode_ARCHITECTURE.adoc`, mais pas encore déployée comme configuration active |
+À activer — config opencode
+|===
+
+=== Ce qui manque
+
+[cols="1,2,3,2", options="header"]
+|===
+| # | Composant | Pourquoi critique | Ordre
+| 1 | **Tâche `assembleCompositeContext` dans engine/** | Sans elle, chaque plugin
+travaille avec UNE composante du vecteur composite — jamais les trois ensemble.
+Le LLM n'observe pas le système vivant, il observe un fragment | P0 absolu
+| 2 | **Spécification du format stdout unifié** | Sans format commun, chaque plugin
+écrit son stdout dans son propre dialecte. Gemma 4 doit parser N formats différents.
+opencode ne peut pas consommer le stdout de manière fiable | P0 immédiat
+| 3 | **Activation OPEncode Gemma 4 E4B** | Tant qu'opencode tourne sur deepseek-v4-pro
+directement, le pipeline ne peut pas fonctionner : le cerveau lourd est à la fois
+orchestrateur ET exécuteur → pas de séparation, pas de routage, pas d'augmentation |
+P0 simultané
+| 4 | **Intégration graphify-gradle → vecteur composite** | Le `graph.json` global
+est la composante structurelle du vecteur. Sans lui, l'assemblage est incomplet |
+P1 — dépend de graphify-gradle US-GF1→GF10
+| 5 | **Mécanisme stimulus CI/CD (récupération stdout workflow)** | Sans lui, le
+développeur ne peut pas consommer le contexte augmenté produit par ses propres
+pipelines CI/CD distants | P2
+| 6 | **Anonymiseur (MVP0 EPIC 2)** | Ouvre l'indexation de `office/` et
+`configuration/` au RAG — données avec PII qui sont aujourd'hui exclues du vecteur
+composite. Augmente la couverture du RAG de ~60% à ~95% | P2
+|===
+
+== Nouvelle Priorité Absolue — le Pipeline Comme P0 Fondamental
+
+=== La feuille de route révisée
+
+[cols="1,2,5", options="header"]
+|===
+| Niveau | Composant | Pourquoi cette priorité
+| **P0 FUNDAMENTAL** | Tâche Gradle `assembleCompositeContext` + Format stdout
+unifié + Activation Gemma 4 E4B dans OPEncode | Sans ces trois, le pipeline
+reste une collection de briques désassemblées. Avec eux, le pipeline devient un
+**produit conscient de lui-même** — invocable, testable, démontrable. C'est le MVP
+du pipeline lui-même
+| **P0 ACCÉLÉRATEUR** | Capsule vidéo (plugin Gradle) | Multiplicateur de valeur.
+Le pipeline génère le contexte, la capsule vidéo génère le contenu visible. Les
+deux ensemble ferment le flywheel de visibilité
+| **P1 CONNECTEUR** | graphify-gradle transverse (42 pts) | Injecte la composante
+structurelle dans le vecteur composite. Sans lui, l'assemblage est à 2/3 (RAG + SQL
+mais pas de relations exactes entre composants)
+| **P2 SAAS** | MVP(-1) : Stripe + OAuth + feature flags + BYOK SaaS | Le SaaS
+est la couche de provisionnement pour autrui — il viendra quand l'audience le
+demandera. Le pipeline P0→P1 donne le carburant. La capsule vidéo donne la visibilité.
+Le SaaS est la conséquence, pas la cause
+| **P3 INDUSTRIALISATION** | Anonymiseur (MVP0 EPIC 2) + Stimulus CI/CD + Employé
+synthétique | Les briques de scale : nettoyage des données, orchestration distante,
+fine-tuning par domaine client
+|===
+
+=== Ce qui change par rapport aux roadmaps précédentes
+
+[cols="1,3,3", options="header"]
+|===
+| Roadmap | MVP0 défini comme | Problème
+| v6 (1er mai) | PlantUML SaaS (Stripe + OAuth) | Construire la caisse enregistreuse
+avant d'avoir des clients
+| v7 (2 mai) | Capsule vidéo (plugin Gradle) | Construire le contenu avant d'avoir
+le contexte qui le rend pertinent
+| v15 (3-4 mai) | Anonymiseur (nettoyage PII) | Construire l'outil de nettoyage
+avant d'avoir défini ce qu'on nettoie POUR quoi
+| **v23 (5 mai)** | **Pipeline d'augmentation de contexte lui-même** | Construire
+le capital fixe qui rend TOUT le reste possible — le sol sur lequel les autres
+couches marchent
+|===
+
+La différence n'est pas cosmétique. Chaque redéfinition antérieure prenait une
+**couche applicative** comme MVP0. La v23 prend **l'infrastructure** comme MVP0.
+C'est le passage de "quel produit vendre ?" à "quelle infrastructure rend tous
+les produits possibles ?"
+
+=== Le raisonnement dialectique
+
+Le workspace suit un développement par contradictions successives :
+
+. *Thèse* (1er mai) : le produit est Edster SaaS — une plateforme de provisionnement
+. *Antithèse* (2 mai) : non, le produit est les plugins Gradle — ils font déjà tout
+  ce que le SaaS promet, et sans infrastructure SaaS
+. *Synthèse partielle* (3-4 mai) : le produit est une méthode reproductible
+  (anonymiseur → datasets → RAG → fine-tuning). La data d'abord
+
+Mais cette synthèse cache une contradiction plus profonde : les plugins, le SaaS,
+l'anonymiseur, la capsule vidéo — **tous** présupposent un mécanisme d'injection
+de contexte augmenté. Ce mécanisme est déjà partiellement construit (RAG, Graphify,
+LangChain4j), mais il n'est pas conscient de lui-même comme produit.
+
+La v23 résout cette contradiction en **nommant** ce qui était implicite :
+
+> Le produit n'est pas ce que le pipeline génère. Le produit est le pipeline
+> lui-même — le capital fixe qui transforme n'importe quel outil de prompt
+> engineering en coproducteur IA conscient du codebase, de la documentation,
+> et du modèle métier du projet.
+
+== Contrat d'Interface Formel du Pipeline
+
+=== La tâche Gradle comme contrat
+
+Chaque tâche du pipeline respecte un contrat formel :
+
+[example]
+.Contrat d'une tâche Gradle d'augmentation de contexte
+====
+*Entrée* — paramètres typés (`-P<key>=<value>`, validés à la compilation)
+*Pré-processing* — Assemblage du vecteur composite (RAG + KG + SQL → contexte unifié)
+*Exécution* — Appel LangChain4j → DeepSeek-v4-pro avec le vecteur composite injecté
+*Post-processing* — Parsing de la réponse (Jackson → data class Kotlin)
+*Sortie* — stdout structuré en JSON lines avec 4 types de lignes :
+  `[CTX]` — métadonnées du contexte augmenté (taille, sources, filtres)
+  `[DS_STATUS]` — statut de l'appel DeepSeek (RUNNING, DONE, FAILED, RETRY)
+  `[RESULT]` — contenu de la réponse (JSON payload)
+  `[ERROR]` — diagnostic d'erreur (stacktrace, suggestion)
+*Code de retour* — 0 = succès, 1 = échec LLM, 2 = échec validation, 3 = timeout
+====
+
+=== Le format stdout unifié
+
+Chaque plugin qui participe au pipeline émet son stdout selon ce format :
+
+[source,json]
+----
+[CTX] {"vector_size": 15420, "sources": ["office/", "OSS/"], "components": ["rag", "kg", "sql"], "tokens_saved": 471}
+[DS_STATUS] {"model": "deepseek-v4-pro", "mode": "MAX_THINK", "timestamp": "2026-05-06T09:32:15Z", "status": "RUNNING"}
+[DS_STATUS] {"model": "deepseek-v4-pro", "mode": "MAX_THINK", "timestamp": "2026-05-06T09:34:22Z", "status": "DONE", "duration_ms": 127043}
+[RESULT] {"summary": "Analyse du module auth-module terminée. 3 problèmes détectés.", "issues": [...], "suggestions": [...]}
+[ERROR] null
+----
+
+Ce format est :
+* *Parsable* par n'importe quel parseur JSON lines (`jq`, `grep`, script Python/Kotlin)
+* *Filterable* par Gemma 4 — il peut extraire `[RESULT]` lignes pour l'utilisateur
+* *Auditable* — le `[CTX]` ligne montre exactement quel contexte a été injecté
+* *Versionnable* — le format peut évoluer (nouveaux types de lignes) sans casser
+  les consommateurs existants
+
+=== Le contrat d'invocation
+
+L'utilisateur (via opencode ou n'importe quel outil) invoque le pipeline avec :
+
+[source,bash]
+----
+./gradlew <tâche> -P<paramètres typés>
+----
+
+Exemples :
+
+[source,bash]
+----
+# Analyse d'un module avec contexte augmenté complet
+./gradlew analyzeCode -Ptarget=auth-module -Pmode=composite
+
+# Génération de tests avec contexte RAG uniquement
+./gradlew generateTests -Ptarget=payment-service -Pcontext=rag
+
+# Refacto avec vecteur composite complet
+./gradlew refactoModule -Ptarget=user-module -Pcontext=composite -Pstrategy=safe
+
+# Rapport multi-module avec knowledge graph uniquement
+./gradlew buildReport -Pscope=workspace -Pcontext=kg
+----
+
+Le paramètre `-Pcontext` contrôle le niveau d'augmentation :
+* `composite` = RAG + KG + SQL (vecteur complet)
+* `rag` = RAG uniquement (similarité sémantique)
+* `kg` = Knowledge Graph uniquement (relations exactes)
+* `sql` = Modèle métier SQL uniquement (DDD)
+* `none` = Aucun contexte augmenté (prompt nu)
+
+== Implémentation — Ce Qu'il Faut Construire
+
+=== Phase 0 — Le MVP du Pipeline (estimé 15-25 sessions)
+
+. *Tâche `assembleCompositeContext` dans engine/build.gradle.kts*
+  - Consomme les trois sources : pgvector (RAG), graph.json (KG), DDL (SQL)
+  - Assemble un objet `CompositeContext` (Kotlin data class)
+  - Expose des filtres : zone (OSS/office/CSS), niveau épistémique (Vision/Opinion/Stratégie)
+  - Sortie : JSON injectable dans le prompt LangChain4j
+
+. *Format stdout unifié dans engine/*
+  - Classe Kotlin `StdoutFormatter` avec 4 méthodes : `ctx()`, `dsStatus()`, `result()`, `error()`
+  - Tous les plugins importent cette classe comme dépendance
+  - Convention : chaque plugin logue via `StdoutFormatter` au lieu de `println()` brut
+
+. *Activation Gemma 4 E4B dans OPEncode*
+  - Configurer opencode pour utiliser `gemma4:e4b` comme modèle
+  - Vérifier que le tool use natif d'opencode fonctionne avec `./gradlew`
+  - Documenter la config dans `.agents/`
+
+. *Première démonstration bout-en-bout*
+  - "Analyse le module auth" → Gemma 4 route → `./gradlew analyzeCode -Ptarget=auth-module -Pcontext=composite` → stdout structuré → opencode affiche le résultat
+  - Capturer la démo en vidéo (même manuellement, sans capsule vidéo automatique)
+
+=== Phase 1 — Intégration graphify-gradle (dépend de P0)
+
+. *graphify-gradle US-GF1→GF10* (42 pts)
+  - Produit `graph.json` global depuis `rootDir = /home/cheroliv/workspace`
+  - Injecté dans le vecteur composite par `assembleCompositeContext`
+
+=== Phase 2 — Bouclage du flywheel de visibilité
+
+. *Capsule vidéo* (plugin Gradle)
+  - Consomme le vecteur composite pour générer des scripts de narration contextuels
+  - slider → TTS → FFmpeg → MP4
+
+. *Contenu massif pour soi*
+  - 4 vidéos FPA + 4 vidéos CDA → 8 semaines de contenu YouTube
+  - Chaque vidéo est la preuve que le pipeline fonctionne
+
+=== Phase 3 — SaaS et industrialisation
+
+. *SaaS Edster* — quand l'audience le demande
+. *Anonymiseur* — quand le RAG doit couvrir les zones avec PII
+. *Employé synthétique* — quand le fine-tuning par domaine client devient nécessaire
+
+== Le Pipeline Comme Mécanisme de Perception du Système
+
+=== Au-delà de la génération
+
+Le pipeline d'augmentation de contexte ne se contente pas d'améliorer la qualité
+des réponses du LLM. Il transforme le LLM de **générateur textuel** en **mécanisme
+de perception du système** :
+
+* *Perception spatiale* : le LLM sait dans quel cercle de confiance se trouve
+  chaque fichier (workspace/ vs office/ vs OSS/ vs CSS/)
+* *Perception relationnelle* : le LLM connaît le graphe de dépendances entre
+  composants — qui importe quoi, qui référence qui
+* *Perception métier* : le LLM comprend le modèle de domaine (bounded contexts,
+  agrégats, value objects) via le schéma SQL parsé en DDD
+* *Perception historique* : le LLM peut interroger l'archive de vision pour
+  comprendre comment la stratégie a évolué
+
+Cette perception est la condition du **vibecoding dialectique** théorisé dans
+`BOOM_BAP.adoc` : l'intention (le vibe) n'est pas injectée dans le vide —
+elle est injectée dans un système dont le LLM perçoit la structure. Le build vert
+n'est pas un hasard — c'est le produit de cette perception augmentée.
+
+=== La boucle d'apprentissage
+
+[source]
+----
+SESSION OPEncode (Gemma 4)
+    │  L'utilisateur exprime un besoin
+    ▼
+TÂCHE GRADLE (assembleCompositeContext)
+    │  RAG + KG + SQL → vecteur composite
+    ▼
+DEEPSEEK-V4-PRO (via LangChain4j)
+    │  Génère avec contexte augmenté
+    ▼
+STDOUT STRUCTURÉ
+    │  [CTX] + [DS_STATUS] + [RESULT]
+    ▼
+GEMMA 4 LIT LE STDOUT
+    │  Visualise, décide de la suite
+    ▼
+UTILISATEUR VALIDE OU CORRIGE
+    │  Feedback humain dans la boucle
+    ▼
+SESSION SUIVANTE
+    │  Le contexte augmenté inclut le résultat de la session précédente
+    │  La mémoire (pgvector) est enrichie du nouvel état
+    ▼
+LE SYSTÈME APPREND
+    └→ Boucle recommence, contexte plus riche, génération plus pertinente
+----
+
+Chaque itération enrichit la base de connaissance (pgvector), met à jour le
+knowledge graph (Graphify delta), et affine le modèle métier (SQL import).
+Le pipeline ne produit pas seulement des artefacts — il **produit de la
+connaissance sur lui-même**.
+
+C'est ce que `BOOM_BAP.adoc` appelle la contradiction motrice : la connaissance
+est toujours en retard sur le réel, mais c'est cette course qui génère la valeur.
+Le pipeline est le mécanisme qui rend cette course possible — et observable par
+le LLM lui-même.
+
+== Le Pipeline et la Gouvernance Agent
+
+=== La gouvernance agent comme premier consommateur
+
+Le pipeline d'augmentation de contexte est le **consommateur naturel** de la
+gouvernance agent (`.agents/`, `PROMPT_REPRISE`, `INDEX.adoc`, `SESSION_CHECKLIST`).
+
+Aujourd'hui, la gouvernance agent est chargée manuellement : Gemma 4 (ou
+DeepSeek directement) lit `PROMPT_REPRISE.adoc`, `INDEX.adoc`, et les documents
+EAGER au début de chaque session.
+
+Avec le pipeline, la gouvernance agent est **injectée automatiquement** dans
+le vecteur composite :
+
+* `PROMPT_REPRISE.adoc` → composante "contexte de mission" du vecteur
+* `INDEX.adoc` → composante "état du projet" (requêtable via RAG)
+* `AGENT_GOVERNANCE.adoc` → règles EAGER injectées comme contraintes
+* `SESSIONS_HISTORY.adoc` → historique consultable via RAG
+
+Le pipeline ne remplace pas la gouvernance agent — il l'**automatise**.
+Ce qui était chargé manuellement (et donc oubliable) devient injecté
+automatiquement (et donc inoubliable).
+
+=== Le pipeline rend la gouvernance agent exportable
+
+Aujourd'hui, adopter la gouvernance agent signifie :
+. Cloner un dépôt avec `.agents/`
+. Comprendre la structure EAGER/LAZY
+. Configurer manuellement le chargement de contexte
+. Maintenir manuellement les INDEX.adoc
+
+Avec le pipeline, adopter la gouvernance agent signifie :
+. Cloner un dépôt avec `.agents/`
+. Lancer `./gradlew assembleCompositeContext`
+. Le contexte est injecté automatiquement → l'outil de prompt engineering
+  est immédiatement augmenté
+
+La barrière à l'adoption passe de "lire 500 lignes de doc et configurer
+manuellement" à "une commande Gradle". C'est le même saut que Magic Stick
+pour l'environnement de travail : de "configurer son poste pendant 2 jours"
+à "boot sur la clé, tout est prêt".
+
+== La Bidirectionnalité du Pipeline — opencode Comme Data Source Autant Que Consommateur
+
+Le flux n'est pas unidirectionnel (`pipeline → opencode`). Le pipeline peut
+aussi **extraire** la gouvernance agent d'opencode comme data source pour
+LangChain4j. C'est la boucle complète : opencode consomme le contexte augmenté,
+ET opencode **alimente** le pipeline en données de gouvernance structurée.
+
+=== Les trois capacités d'extraction
+
+==== Capacité 1 — Relocalisation du Texte des Agents dans LangChain4j
+
+Chaque fichier `.agents/` contient du texte conçu pour être lu par un LLM
+dans opencode. Mais ce même texte peut être **relocalisé** comme composante
+du prompt LangChain4j dans une tâche Gradle :
+
+[source,kotlin]
+----
+tasks.register<RelocalizeAgentsTask>("relocalizeAgents") {
+    projectDir.set(file("."))
+    agentDocs.set(listOf("AGENT.adoc", "PROMPT_REPRISE.adoc", "INDEX.adoc"))
+
+    doLast {
+        // 1. Parser les fichiers .agents/ en structured data
+        val agentContext = AgentDocParser.parse(projectDir.get().asFile) {
+            section("Règle 1") { type = AgentDocType.CONSTRAINT }
+            section("Règle 2") { type = AgentDocType.PROCEDURE }
+            section("Règle 2bis") { type = AgentDocType.EPISTEMIC_FILTER }
+            section("Mission") { type = AgentDocType.MISSION }
+            section("Portefeuille Transverse") { type = AgentDocType.CROSS_REF }
+        }
+
+        // 2. Injecter comme composante du vecteur composite
+        val composite = CompositeContext(
+            rag = pgvector.query(embedding),
+            knowledgeGraph = graphify.query(predicate),
+            domainModel = sqlParser.extractBoundedContexts(ddl),
+            agentGovernance = agentContext  // ← NOUVEAU : gouvernance agent
+        )
+
+        // 3. Appel LangChain4j avec gouvernance injectée
+        val prompt = PromptTemplate.from("""
+            [GOUVERNANCE AGENT]
+            Règles absolues : {{composite.agentGovernance.constraints}}
+            Procédures : {{composite.agentGovernance.procedures}}
+            Filtre épistémique : {{composite.agentGovernance.epistemicFilter}}
+            Mission : {{composite.agentGovernance.mission}}
+            Références croisées : {{composite.agentGovernance.crossReferences}}
+
+            [CONTEXTE AUGMENTÉ]
+            {{composite.rag}}
+            {{composite.knowledgeGraph}}
+            {{composite.domainModel}}
+
+            [TÂCHE]
+            {{userRequest}}
+        """).apply(composite).apply(userRequest)
+
+        println("[CTX] agent_docs_parsed=${agentContext.size}")
+        val response = deepseek.generate(prompt)
+        println(response.content)
+    }
+}
+----
+
+Ce qui change : au lieu que Gemma 4/DeepSeek lise les fichiers `.agents/`
+dans le contexte opencode (~800 tokens EAGER + LAZY à la demande), c'est
+une **tâche Gradle** qui les parse, les structure, et les injecte dans
+le prompt LangChain4j de manière typée. Le LLM lourd (DeepSeek) n'a pas
+besoin de "lire" la gouvernance agent — elle fait partie de son vecteur
+composite au même titre que le RAG, le knowledge graph, et le modèle métier.
+
+==== Capacité 2 — Initialisation de la Gouvernance Agent sur un Projet Vierge
+
+Un nouveau projet opencode n'a pas de `.agents/`. Le pipeline peut
+**générer** la structure de gouvernance initiale depuis les templates
+référentiels du workspace :
+
+[source,kotlin]
+----
+tasks.register<InitAgentGovernance>("initAgentGovernance") {
+    projectDir.set(file("."))
+    projectName.set(project.findProperty("name") as String)
+    templateSource.set(layout.projectDirectory.dir("../codebase-gradle/templates/agents"))
+
+    doLast {
+        // 1. Copier les templates depuis le référentiel
+        val templates = mapOf(
+            "AGENT.adoc" to Template("AGENT_TEMPLATE.adoc"),
+            ".agents/INDEX.adoc" to Template("INDEX_TEMPLATE.adoc"),
+            ".agents/PROMPT_REPRISE.adoc" to Template("PROMPT_REPRISE_TEMPLATE.adoc"),
+            ".agents/SESSION_CHECKLIST.adoc" to Template("SESSION_CHECKLIST_TEMPLATE.adoc")
+        )
+
+        templates.forEach { (path, template) ->
+            val rendered = template.render(mapOf(
+                "projectName" to projectName.get(),
+                "date" to LocalDate.now().toString(),
+                "license" to "Apache 2.0"
+            ))
+            File(projectDir.get().asFile, path).writeText(rendered)
+        }
+
+        // 2. Demander à LangChain4j d'affiner le template selon le contexte projet
+        val projectContext = """
+            Projet : ${projectName.get()}
+            Stack : ${detectStack(projectDir.get().asFile)}
+            Fichiers existants : ${listFiles(projectDir.get().asFile)}
+        """
+
+        val refined = langchain4j.generate(PromptTemplate.from("""
+            Voici un projet sans gouvernance agent. Le template initial a été généré.
+            Analyse le codebase existant et suggère des ajustements pour :
+            - Le contexte EAGER (quels fichiers sont critiques au démarrage ?)
+            - Les codebases de référence LAZY (ce projet dépend-il de plugins Gradle existants ?)
+            - Les règles de vérification SESSION_CHECKLIST spécifiques à ce projet
+
+            Template généré : $templates
+            Contexte projet : $projectContext
+        """))
+
+        // 3. Appliquer les refinements suggérés par le LLM
+        applyRefinements(projectDir.get().asFile, refined)
+
+        println("[CTX] governance_initialized=true project=${projectName.get()}")
+        println("[RESULT] ${refined.summary}")
+    }
+}
+----
+
+Usage :
+
+[source,bash]
+----
+# Sur un projet vierge sans .agents/
+./gradlew initAgentGovernance -Pname=my-new-plugin
+----
+
+Le pipeline ne se contente pas d'augmenter le contexte — il **crée la
+structure de gouvernance** qui sera ensuite consommée comme contexte
+augmenté par les tâches LangChain4j. Le cycle est fermé : création →
+consommation → enrichissement → nouvelle création.
+
+==== Capacité 3 — Récupération de la Config opencode d'un Projet Existant
+
+Pour un projet qui a déjà une structure `.agents/` mais qui ne tourne pas
+dans le pipeline (pas de `build.gradle.kts`, pas de tâches Gradle), le pipeline
+peut **absorber** la gouvernance agent existante comme data source LangChain4j :
+
+[source,kotlin]
+----
+tasks.register<ImportOpenCodeGovernance>("importOpenCodeGovernance") {
+    sourceProjectDir.set(file(project.findProperty("source") as String))
+
+    doLast {
+        // 1. Lire tous les fichiers .agents/ du projet existant
+        val governance = AgentDocParser.parse(sourceProjectDir.get().asFile)
+
+        // 2. Les injecter dans le vecteur composite du pipeline
+        //    (pas dans opencode — dans LangChain4j)
+        val composite = CompositeContext(
+            agentGovernance = governance,
+            rag = pgvector.query(embed(governance.mission.description)),
+            knowledgeGraph = graphify.query("project_name = '${governance.name}'"),
+            domainModel = sqlParser.extractBoundedContexts(
+                detectSchema(sourceProjectDir.get().asFile)
+            )
+        )
+
+        // 3. Le pipeline est maintenant "conscient" de la gouvernance
+        //    de ce projet externe — il peut générer, analyser, refactorer
+        //    avec les règles du projet source
+        println("[CTX] external_governance_imported=true source=${governance.name}")
+        println("[CTX] rules_count=${governance.constraints.size}")
+
+        // 4. Optionnel : générer le build.gradle.kts qui permettra au projet
+        //    de devenir autonome dans le pipeline
+        val buildScript = generateBuildScript(governance)
+        File(sourceProjectDir.get().asFile, "build.gradle.kts").writeText(buildScript)
+        println("[RESULT] build_script_generated=true")
+    }
+}
+----
+
+Usage :
+
+[source,bash]
+----
+# Absorber la gouvernance agent d'un projet externe dans le pipeline
+./gradlew importOpenCodeGovernance -Psource=/path/to/another-project
+----
+
+Ce mode est le **pont d'intégration** pour les projets qui ont commencé
+avec opencode + gouvernance agent mais sans Gradle. Le pipeline les
+absorbe, les rend consommables par LangChain4j, et leur fournit le
+`build.gradle.kts` qui leur permettra de devenir autonomes.
+
+=== Les Tâches d'Audit et de Refactorisation avec Contraintes Fortement Typées
+
+Le quatrième usage de la bidirectionnalité est la capacité à lancer des
+tâches d'audit/analyse sur la gouvernance agent elle-même — puis à
+refactoriser le comportement de l'agent (les fichiers `.agents/`) en
+passant par LangChain4j, mais cette fois avec des **contraintes
+structurantes fortement typées** par Gradle.
+
+==== Le problème résolu
+
+Aujourd'hui, quand opencode (Gemma 4) modifie un fichier `.agents/`, il
+le fait avec un prompt conversationnel. Aucune validation structurelle.
+Rien ne garantit que la modification respecte :
+* La classification Vision/Opinion/Stratégie (Règle 2bis)
+* Le format des sections EAGER/LAZY
+* La cohérence du portefeuille transverse (tous les INDEX.adoc se connaissent)
+* L'absence de PII dans une section publiable
+
+Avec les tâches Gradle d'audit → refacto, le pipeline **audite** d'abord
+(analyse), puis **refactorise** (génération LangChain4j), puis **valide**
+(contraintes Kotlin typées), puis **réécrit** les fichiers `.agents/`.
+
+==== La chaîne complète
+
+[source]
+----
+ÉTAPE 1 — AUDIT (analyse déterministe + LLM)
+    │  ./gradlew auditAgentGovernance
+    │  Parse .agents/ → détecte :
+    │    - Sections VISION sans tag [VISION]
+    │    - Sections OPINION dans PROMPT_REPRISE (violation Règle 2bis)
+    │    - INDEX.adoc qui référence un projet non listé dans le portefeuille transverse
+    │    - AGENT.adoc qui ne mentionne pas la Règle 2bis
+    │    - PII résiduelle dans une section taguée Niveau 3
+    ▼
+ÉTAPE 2 — RAPPORT D'AUDIT (stdout structuré)
+    │  [AUDIT] issues=7 critical=2 warnings=5
+    │  [AUDIT] issue_1: "PROMPT_REPRISE.adoc:45 — opinion non taguée"
+    │  [AUDIT] issue_2: "AGENT.adoc — manque référence Règle 2bis"
+    ▼
+ÉTAPE 3 — REFACTO VIA LANGCHAIN4J (proposition)
+    │  ./gradlew refactoAgentGovernance --auto-fix
+    │  Pour chaque issue d'audit, appel LangChain4j → DeepSeek-v4-pro
+    │  avec le contexte complet (RAG + KG + gouvernance agent actuelle)
+    │  ET avec des contraintes structurantes Kotlin :
+    │
+    │  data class RefactoConstraint(
+    │      val preserveHistory: Boolean = true,   // jamais supprimer [v1]...[vN]
+    │      val tagOpinion: Boolean = true,         // ajouter // @OPINION
+    │      val neverPublishable: List<String>,     // sections interdites en blog
+    │      val mustBeVersionned: List<String>,     // sections à versionner
+    │      val zoneFilter: Zone = Zone.OFFICE      // quelle zone cible
+    │  )
+    ▼
+ÉTAPE 4 — VALIDATION KOTLIN TYPÉE (avant écriture)
+    │  Avant d'écrire le fichier modifié, le plugin Gradle valide :
+    │    - La structure AsciiDoc est intacte
+    │    - Les tags [vN] sont préservés
+    │    - Les sections @OPINION ne contiennent pas d'URL publique
+    │    - Les références croisées sont valides (INDEX.adoc cohérent)
+    │    - Le format stdout est respecté
+    │  Si validation FAIL → rollback, rapport d'erreur
+    │  Si validation PASS → écriture
+    ▼
+ÉTAPE 5 — ÉCRITURE ET COMMIT
+    │  Les fichiers .agents/ sont modifiés
+    │  git diff montre exactement ce qui a changé
+    │  L'humain valide visuellement avant commit
+    ▼
+ÉTAPE 6 — RÉAUDIT (vérification post-refacto)
+    │  ./gradlew auditAgentGovernance
+    │  Vérifie que les issues précédentes sont résolues
+    │  Aucune régression
+----
+
+==== Contrat d'une tâche d'audit → refacto
+
+[example]
+.Contrat de la tâche `refactoAgentGovernance`
+====
+*Entrée* — Fichiers `.agents/` du projet cible + rapport d'audit précédent
+*Contraintes Kotlin typées* — `RefactoConstraint` (data class immuable, validée
+  à la compilation) : preservationHistory, tagOpinion, neverPublishable, zoneFilter
+*Appel LangChain4j* — DeepSeek-v4-pro avec :
+  - Le vecteur composite complet (RAG + KG + SQL + gouvernance actuelle)
+  - Les issues d'audit
+  - Les contraintes structurantes Kotlin (injectées en system prompt)
+*Validation pré-écriture* — `AgentDocValidator` : parse le document proposé,
+  vérifie les contraintes, valide la cohérence cross-références
+*Sortie* — Fichiers `.agents/` modifiés + stdout d'audit post-refacto
+  (`[AUDIT] issues_resolved=7 new_issues=0`)
+====
+
+==== Exemple concret
+
+Imaginons un `PROMPT_REPRISE.adoc` qui contient :
+
+[source,asciidoc]
+----
+== Contexte de Mission
+Développer le plugin capsule-video pour le client Orange.
+Contact : jean.dupont@orange.com
+Budget estimé : 50k€ sur 3 mois.
+----
+
+L'audit détecte :
+* `jean.dupont@orange.com` → PII niveau 2, ne peut pas être dans un fichier
+  chargé en EAGER par le LLM
+* `Orange` → référence client → niveau 2
+* `Budget estimé : 50k€` → OPINION (estimation non validée)
+
+La tâche `refactoAgentGovernance` appelle DeepSeek-v4-pro avec les contraintes :
+
+[source,kotlin]
+----
+RefactoConstraint(
+    preserveHistory = true,
+    tagOpinion = true,
+    neverPublishable = listOf("email", "client_name", "budget"),
+    zoneFilter = Zone.OFFICE
+)
+----
+
+DeepSeek propose :
+
+[source,asciidoc]
+----
+== Contexte de Mission
+Développer le plugin capsule-video pour [CLIENT_REFERENCE].
+Contact : [EMAIL_REDACTED]
+// @OPINION Budget estimé : [MONTANT_REDACTED] sur 3 mois.
+----
+
+Le validateur Kotlin vérifie :
+* ✅ PII redactée
+* ✅ Section budget taguée @OPINION
+* ✅ Tags [vN] préservés
+* ✅ Aucune URL publique
+* ✅ Référence au client remplacée par placeholder
+
+Validation PASS → écriture → commit.
+
+L'humain n'a pas eu à relire manuellement le fichier. Le pipeline a audité
+→ proposé → validé → écrit. L'humain a juste confirmé le commit.
+
+=== La Bidirectionnalité Comme Principe Architectural
+
+Le pipeline n'est pas un injecteur de contexte unidirectionnel. C'est une
+**interface bidirectionnelle** entre la gouvernance agent (opencode) et
+l'exécution LLM (LangChain4j dans tâche Gradle) :
+
+[plantuml]
+----
+@startuml
+skinparam backgroundColor transparent
+skinparam componentStyle rectangle
+
+rectangle "OPEncode\n(Gemma 4 E4B)" as opencode #LightGreen {
+    [.agents/ (gouvernance)]
+    [Session active]
+    [Conversation]
+}
+
+rectangle "Pipeline Gradle\n(Kotlin + LangChain4j)" as gradle #LightBlue {
+    [assembleCompositeContext]
+    [relocalizeAgents]
+    [initAgentGovernance]
+    [importOpenCodeGovernance]
+    [auditAgentGovernance]
+    [refactoAgentGovernance]
+}
+
+database "pgvector + Graphify" as db #LightYellow
+
+cloud "DeepSeek-v4-pro" as cloud #LightPink
+
+' Flux opencode → pipeline (EXTRACTION)
+opencode --> gradle : "relocalizeAgents\n(extraction .agents/ →\ncomposante vecteur composite)"
+opencode --> gradle : "initAgentGovernance\n(projet vierge → .agents/)"
+opencode --> gradle : "importOpenCodeGovernance\n(projet externe → absorption)"
+
+' Flux pipeline → opencode (INJECTION)
+gradle --> opencode : "stdout structuré\n[CTX] [DS_STATUS] [RESULT] [AUDIT]"
+
+' Flux pipeline interne
+gradle --> db : "RAG + KG + SQL"
+db --> gradle : "contexte augmenté"
+gradle --> cloud : "prompt avec\ncontraintes typées"
+cloud --> gradle : "réponse"
+
+' Flux d'audit → refacto
+gradle --> gradle : "auditAgentGovernance\n→ rapport →"
+gradle --> gradle : "refactoAgentGovernance\n→ validation Kotlin → écriture"
+
+@enduml
+----
+
+Les six tâches Gradle forment un système complet :
+
+[cols="1,3,2", options="header"]
+|===
+| Tâche | Direction | Ce qu'elle fait
+| `assembleCompositeContext` | pipeline → opencode | Injecte le vecteur composite
+dans le stdout → opencode lit le contexte augmenté
+| `relocalizeAgents` | opencode → pipeline | Parse `.agents/` → injecte la
+gouvernance comme composante du vecteur composite dans LangChain4j
+| `initAgentGovernance` | pipeline → opencode | Crée `.agents/` sur un projet
+vierge à partir des templates + raffinement LLM
+| `importOpenCodeGovernance` | opencode → pipeline | Absorbe la gouvernance
+agent d'un projet externe → vectorisation + génération build.gradle.kts
+| `auditAgentGovernance` | opencode → pipeline | Analyse `.agents/` →
+détection issues (PII, opinions non taguées, incohérences)
+| `refactoAgentGovernance` | pipeline → opencode | Corrige les issues d'audit
+via LangChain4j avec contraintes Kotlin typées → écriture validée
+|===
+
+L'ensemble constitue le **métabolisme complet de la gouvernance agent** :
+naissance (init), absorption (import), structuration (relocalize), diagnostic
+(audit), correction (refacto), et augmentation (assemble). Le LLM n'est plus
+un lecteur passif de fichiers `.adoc` — il est le **gestionnaire actif** de
+son propre cycle de vie de gouvernance.
+
+== codex — Le Plugin d'Acquisition de Documents du Pipeline
+
+=== Positionnement dans l'architecture
+
+Le vecteur composite repose sur trois composantes : RAG pgvector, Knowledge Graph
+Graphify, Modèle Métier SQL. Ces trois composantes sont alimentées par des documents
+structurés — mais aujourd'hui, l'alimentation est manuelle ou supposée faite en
+amont. `codex` est le **plugin Gradle qui industrialise l'acquisition** de ces
+documents, en particulier depuis les sources non-structurées comme les PDFs.
+
+Sans `codex`, le pipeline d'augmentation de contexte ne peut pas ingérer
+`office/books-collection/` ni aucune source documentaire dense. Le RAG est
+borgne sur la connaissance livresque. `codex` est le **sens de la lecture**
+du pipeline.
+
+=== Organisation physique — monorepo, indépendance logique de build
+
+==== Le principe
+
+`codex` adopte un pattern **monorepo physique, indépendance logique de build** :
+un seul dépôt git, plusieurs projets Gradle autonomes cohabitant dans le même
+dossier racine — sans jamais être déclarés dans le `settings.gradle.kts` de `codex`.
+
+Ce pattern est une troisième voie entre :
+
+* *Multi-module Gradle* (A) — un `settings.gradle.kts` racine qui déclare tous
+  les sous-projets via `include(":codex-pdf")`. Couplage fort de build, impossible
+  de builder un sous-module indépendamment.
+* *Dépôts totalement séparés* (B) — chaque plugin dans son propre dépôt git.
+  Cohérent avec le pattern workspace existant (`plantuml-gradle`, `graphify-gradle`),
+  mais fragmente l'historique et alourdit la gouvernance pour un écosystème
+  fortement couplé sémantiquement.
+
+La troisième voie : **un seul `.git` à la racine de `codex/`, des
+`settings.gradle.kts` indépendants par sous-projet, `codex` dictant la version**.
+
+==== `codex` est le contrat
+
+`codex` n'est pas un plugin parent abstrait séparé de son contrat.
+**`codex` est le contrat** — il contient directement les types partagés,
+l'interface `DocExtractor`, et les conventions communes (`StdoutFormatter`,
+groupe Maven). Il n'existe pas de module `doc-extractor` séparé.
+
+`codex-pdf` et `codex-epub` importent `codex` comme unique dépendance de contrat.
+
+==== Structure du dépôt
+
+[source]
+----
+OSS/
+  codex/                        ← .git ici — un seul repo git
+    build.gradle.kts            ← codex = le contrat + conventions communes
+    settings.gradle.kts         ← rootProject.name = "codex" UNIQUEMENT, zéro include()
+    gradle.properties           ← VERSION UNIQUE : codex.version=1.0.0
+    src/
+      main/kotlin/
+        DocExtractor.kt         ← interface + data classes (BlockType, ExtractedBlock...)
+        StdoutFormatter.kt      ← format [CTX][DS_STATUS][RESULT][ERROR] partagé
+    codex-pdf/
+      build.gradle.kts          ← projet Gradle autonome
+      settings.gradle.kts       ← rootProject.name = "codex-pdf" UNIQUEMENT
+      src/
+    codex-epub/
+      build.gradle.kts          ← projet Gradle autonome
+      settings.gradle.kts       ← rootProject.name = "codex-epub" UNIQUEMENT
+      src/
+----
+
+==== `codex` dicte la version
+
+La version est déclarée **une seule fois** dans `codex/gradle.properties` :
+
+[source,properties]
+----
+codex.version=1.0.0
+----
+
+Chaque sous-projet lit cette version via un chemin relatif dans son
+`build.gradle.kts` — pas de duplication, pas de drift possible :
+
+[source,kotlin]
+----
+// codex-pdf/build.gradle.kts
+val codexVersion = file("../gradle.properties")
+    .readLines()
+    .first { it.startsWith("codex.version") }
+    .substringAfter("=")
+    .trim()
+
+dependencies {
+    implementation("com.cheroliv:codex:$codexVersion")
+    implementation("org.apache.pdfbox:pdfbox:3.0.2")
+    implementation("org.apache.tika:tika-core:2.9.2")
+}
+----
+
+Bumper la version de tout l'écosystème `codex` = modifier **une seule ligne**
+dans `codex/gradle.properties`. Le sous-projet lit la version à la compilation —
+pas de version figée dans le code.
+
+==== Chaîne de publication via mavenLocal
+
+[source,bash]
+----
+# Ordre obligatoire — scriptable dans un Makefile à la racine de codex/
+cd codex/      && ./gradlew publishToMavenLocal   # 1. contrat + conventions
+cd codex-pdf/  && ./gradlew publishToMavenLocal   # 2. implémentation PDF
+cd codex-epub/ && ./gradlew publishToMavenLocal   # 3. implémentation EPUB (à venir)
+----
+
+==== Ce que ce pattern garantit
+
+*Un seul historique git* ::
+Toutes les évolutions de `codex`, `codex-pdf` et `codex-epub` sont dans le même
+`git log`. Une PR couvre l'ensemble de l'écosystème. Un tag git versionne
+l'ensemble de manière cohérente — le tag correspond à `codex.version`.
+
+*Version unique et sans drift* ::
+`codex` dicte la version. Les sous-projets la lisent depuis `gradle.properties`
+à chaque build. Il est structurellement impossible qu'un sous-projet soit sur
+une version différente du contrat.
+
+*Indépendance de build totale* ::
+`./gradlew build` dans `codex-pdf/` ne connaît pas `codex/` au sens Gradle.
+Il consomme l'artefact publié dans mavenLocal, exactement comme il consommerait
+LangChain4j depuis MavenCentral. Pas de couplage de cycle de build.
+
+*Cohérence avec la gouvernance workspace* ::
+Le pattern `publishToMavenLocal` → `implementation("com.cheroliv:...")` est
+identique à la chaîne `plantuml-gradle` → `graphify-gradle` → `engine/`. Zéro
+exception dans la gouvernance des dépendances.
+
+=== Le contrat `codex`
+
+`codex` définit les types partagés et l'interface que toute implémentation
+doit respecter :
+
+[source,kotlin]
+----
+enum class BlockType { TITLE, SUBTITLE, BODY, CODE, NOTE, TABLE, CALLOUT }
+
+data class ExtractedBlock(
+    val type: BlockType,
+    val content: String,
+    val pageNumber: Int,
+    val fontSizePt: Float?,
+    val fontFamily: String?,
+    val confidence: Float = 1.0f
+)
+
+data class ExtractedDocument(
+    val sourcePath: String,
+    val title: String,
+    val authors: List<String>,
+    val blocks: List<ExtractedBlock>,
+    val metadata: Map<String, String>
+)
+
+interface DocExtractor {
+    fun extract(source: File): ExtractedDocument
+    fun supportsFormat(source: File): Boolean
+}
+----
+
+=== Les tâches Gradle du pipeline d'acquisition
+
+[cols="1,2,3", options="header"]
+|===
+| Tâche | Direction | Ce qu'elle fait
+| `codexExtract` | source → `ExtractedDocument` | Implémentée dans `codex-pdf`
+ou `codex-epub` selon le format. Sortie : `ExtractedDocument` sérialisé en JSON
+| `codexChunk` | `ExtractedDocument` → chunks sémantiques | Découpe par section
+(titre → prochain titre). Chaque chunk conserve son `BlockType`, son numéro de page,
+et son chemin de titre parent
+| `codexIngest` | chunks → pgvector | Embeds ONNX (AllMiniLmL6V2) + INSERT dans
+pgvector. Chaque chunk est une ligne de la base RAG, avec métadonnées zone (OSS/office)
+|===
+
+=== `codex-pdf` — l'implémentation PDF
+
+`codex-pdf` utilise Apache PDFBox pour exploiter les métadonnées typographiques
+du PDF — ce que `pdftotext` + `pandoc` ne peuvent pas faire :
+
+[source,kotlin]
+----
+class PdfDocExtractor : DocExtractor {
+
+    override fun supportsFormat(source: File) =
+        source.extension.lowercase() == "pdf"
+
+    override fun extract(source: File): ExtractedDocument {
+        val document = PDDocument.load(source)
+        val stripper = StructuredPDFTextStripper()
+        val blocks = mutableListOf<ExtractedBlock>()
+
+        document.pages.forEachIndexed { pageIdx, page ->
+            val textWithFont = stripper.extractTextWithFont(page)
+            textWithFont.forEach { span ->
+                val blockType = when {
+                    span.fontSize > 14f -> BlockType.TITLE
+                    span.fontSize > 12f -> BlockType.SUBTITLE
+                    span.fontFamily.contains("Mono", ignoreCase = true) -> BlockType.CODE
+                    span.fontFamily.contains("Italic", ignoreCase = true) -> BlockType.NOTE
+                    else -> BlockType.BODY
+                }
+                blocks += ExtractedBlock(
+                    type = blockType,
+                    content = span.text,
+                    pageNumber = pageIdx + 1,
+                    fontSizePt = span.fontSize,
+                    fontFamily = span.fontFamily
+                )
+            }
+        }
+
+        val info = document.documentInformation
+        return ExtractedDocument(
+            sourcePath = source.absolutePath,
+            title = info.title ?: source.nameWithoutExtension,
+            authors = listOfNotNull(info.author),
+            blocks = blocks,
+            metadata = mapOf(
+                "pages" to document.numberOfPages.toString(),
+                "producer" to (info.producer ?: "unknown")
+            )
+        )
+    }
+}
+----
+
+=== Intégration dans le vecteur composite
+
+[source]
+----
+OFFICE/BOOKS-COLLECTION/ (PDFs O'Reilly, ebooks techniques)
+    │
+    ▼
+codexExtract (codex-pdf)
+    │  ExtractedDocument : blocs typés (TITLE, CODE, BODY...)
+    ▼
+codexChunk
+    │  Chunks sémantiques par section, avec métadonnées (page, type, titre parent)
+    ▼
+codexIngest
+    │  Embeddings ONNX + INSERT pgvector (zone = office, type = book)
+    ▼
+PGVECTOR (base RAG enrichie)
+    │
+    ▼
+assembleCompositeContext (pipeline existant)
+    │  RAG pgvector + KG Graphify + SQL DDD → vecteur composite
+    ▼
+LANGCHAIN4J → DeepSeek-v4-pro → stdout structuré
+----
+
+=== Positionnement dans la roadmap
+
+[cols="1,2", options="header"]
+|===
+| Phase | `codex` dans la roadmap
+| P0 FUNDAMENTAL | Sans `codex` — le pipeline fonctionne sur code source + docs `.adoc`
+| P1 CONNECTEUR | `codex-pdf` opérationnel — le RAG couvre `office/books-collection/`
+| P2 INDUSTRIALISATION | `codex-epub` + `codexIngest` automatisé en CI/CD
+|===
+
+=== stdout de `codex`
+
+`codex` respecte le format stdout unifié du pipeline via `StdoutFormatter` :
+
+[source,json]
+----
+[CTX] {"extractor": "codex-pdf", "source": "applied-ai-enterprise-java-ebook.pdf", "pages": 432, "blocks_extracted": 8743, "chunks_produced": 312}
+[DS_STATUS] {"task": "codexIngest", "status": "RUNNING", "embeddings_done": 156, "embeddings_total": 312}
+[DS_STATUS] {"task": "codexIngest", "status": "DONE", "duration_ms": 43210, "vectors_inserted": 312}
+[RESULT] {"indexed": 312, "zone": "office", "type": "book", "title": "Applied AI for Enterprise Java Development"}
+[ERROR] null
+----
+
+== Synthèse — Le Cinquième Document du Jardin Secret
+
+Ce document est le **cinquième document du jardin secret**, complétant :
+
+* `WORKSPACE_ORGANIZATION.adoc` — l'organisation spatiale (les trois zones, la règle .git plat)
+* `WORKSPACE_AS_PRODUCT.adoc` — la vision produit (Edster, flywheel, 6 couches)
+* `WHAT_THE_GAMES_BEEN_MISSING.adoc` — l'inventaire et la priorisation
+* `BOOM_BAP.adoc` — la théorie des quatre cycles de vie
+* **`AUGMENTED_CONTEXT_PIPELINE.adoc`** — la spécification du produit fondamental
+
+Il est le document qui **nomme le capital fixe** — l'infrastructure que les quatre
+autres documents présupposent sans la nommer explicitement.
+
+La relation entre les cinq documents :
+
+[source]
+----
+WORKSPACE_ORGANIZATION.adoc        → OÙ sont les fichiers ?
+    ↓
+WORKSPACE_AS_PRODUCT.adoc          → QUOI construire ?
+    ↓
+WHAT_THE_GAMES_BEEN_MISSING.adoc   → DANS QUEL ORDRE ?
+    ↓
+BOOM_BAP.adoc                     → COMMENT le système apprend ?
+    ↓
+AUGMENTED_CONTEXT_PIPELINE.adoc    → QU'EST-CE QUI REND TOUT CELA POSSIBLE ?
+                                     (le capital fixe)
+----
+
+Les quatre premiers documents décrivent le **quoi** et le **comment**. Le cinquième
+décrit le **par quoi** — le moyen de production sans lequel les quatre autres restent
+des spécifications sur le papier.
+
+== Conclusion — L'Essence Intrinsèque du Workspace en Mai 2026
+
+Le workspace, à ce stade de son développement, n'a pas besoin d'un SaaS. Il n'a pas
+besoin d'une capsule vidéo. Il n'a pas besoin d'un anonymiseur. Il a besoin de
+**prendre conscience de ce qu'il est déjà** : un pipeline d'augmentation de contexte
+qui transforme n'importe quel outil de prompt engineering en coproducteur IA,
+sans jamais altérer l'outil.
+
+Les trois changements de définition du MVP0 n'étaient pas des erreurs de vision.
+Ils étaient des **symptômes** — la manifestation visible d'une infrastructure qui
+n'avait pas encore de nom. Chaque redéfinition capturait une couche réelle, mais
+aucune ne capturait la couche fondamentale.
+
+Ce document donne un nom à cette couche fondamentale. Il la spécifie, la priorise,
+et la place au centre de la roadmap. Non pas comme une couche parmi d'autres —
+comme le **sol sur lequel toutes les autres couches sont construites**.
+
+Le pipeline d'augmentation de contexte est le vrai produit. Il était déjà là,
+implicite, opérationnel par fragments. Il manquait juste d'être nommé.
+
+Maintenant il l'est.
+
+[.text-right]
+*Document rédigé le 6 mai 2026 — Session dialectique sur l'essence du produit.*
+*Cinquième document du jardin secret.*
+*Produit de la discussion avec opencode (deepseek-v4-pro) sur la redéfinition du MVP0.*
