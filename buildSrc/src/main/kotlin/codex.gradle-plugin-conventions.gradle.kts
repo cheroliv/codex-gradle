@@ -1,3 +1,5 @@
+import dev.cheroliv.codex.tasks.ExtractBookStructureTask
+import dev.cheroliv.codex.tasks.ExtractTextTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -36,11 +38,34 @@ tasks.withType<Test>().configureEach {
     }
 }
 
+val CODEX_GROUP = "codex"
+
+tasks.register("extractText", ExtractTextTask::class.java) {
+    group = CODEX_GROUP
+    description = "Extrait le texte brut structuré d'un PDF avec métadonnées typographiques"
+    pdfFile = project.propertyOrNull("pdfFile")?.toString()?.let { project.layout.projectDirectory.file(it) }
+        ?: project.objects.fileProperty().also { it.set(project.providers.gradleProperty("pdfFile")) }
+    outputFile = project.propertyOrNull("outputFile")?.toString()?.let { project.layout.projectDirectory.file(it) }
+        ?: project.objects.fileProperty().also { it.set(project.providers.gradleProperty("outputFile")) }
+}
+
+tasks.register("extractBookStructure", ExtractBookStructureTask::class.java) {
+    group = CODEX_GROUP
+    description = "Extrait la structure d'un PDF (titres, sections) et produit un .adoc hiérarchique"
+    val pdf = project.propertyOrNull("pdfFile")?.toString()
+    val out = project.propertyOrNull("outputFile")?.toString()
+    if (pdf != null) pdfFile.set(project.file(pdf))
+    if (out != null) outputFile.set(project.file(out))
+}
+
+fun Project.propertyOrNull(name: String): Any? =
+    if (hasProperty(name)) property(name) else null
+
 publishing {
     repositories {
         maven {
             name = "localRepo"
-            url  = uri(rootProject.layout.buildDirectory.dir("local-repo"))
+            url = uri(rootProject.layout.buildDirectory.dir("local-repo"))
         }
     }
 }

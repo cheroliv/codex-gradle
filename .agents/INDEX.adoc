@@ -37,7 +37,7 @@ _Session inter-session_ : 004 (chore migration chemins foundry/ → foundry/OSS/
 |===
 | EPIC | Description | Statut | Priorite
 | CDX-0 | Bootstrap gouvernance agent codex | ✅ TERMINE | P0
-| CDX-1a | Task `extractBookStructure` — PDFBox PDFStreamEngine → AsciiDoc structuré | A FAIRE | P0
+| CDX-1a | Task `extractBookStructure` — PDFBox PDFStreamEngine → AsciiDoc structuré (224 lignes, typo heuristic, LineGroup) | ✅ TERMINE | P0
 | CDX-1b | Task `asciiDocToJsonLdd` — AST AsciidoctorJ → JSON LDD | A FAIRE | P0
 | CDX-1c | Task `importBookSql` — JSON LDD → DDL + INSERT PostgreSQL | A FAIRE | P0
 | CD-2 | Extraction de documentation des dépendances (`acquireDependencyDocs`) | A FAIRE | P1 | codebase-gradle
@@ -74,7 +74,7 @@ _Session inter-session_ : 004 (chore migration chemins foundry/ → foundry/OSS/
 | `settings.gradle.kts` | ✅ rootProject + include doc-pipeline
 | `buildSrc/` | ✅ Convention plugin + catalog buildSrc
 | `doc-pipeline/build.gradle.kts` | ✅ Dependances + publication
-| `doc-pipeline/src/main/` | ✅ CodexPlugin.kt + ExtractTextTask.kt
+| `doc-pipeline/src/main/` | ✅ CodexPlugin.kt + ExtractTextTask.kt + ExtractBookStructureTask.kt
 | `doc-pipeline/src/test/` | 🚧 Structure prête, tests a ecrire
 |===
 
