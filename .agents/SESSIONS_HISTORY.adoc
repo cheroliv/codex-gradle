@@ -32,3 +32,29 @@ Historique des sessions de developpement du plugin codex-gradle.
 - DAG N2 — importable par N3 engine/
 - Pattern jhipster-gradle-plugins comme modele architectural
 - Nom du recru : Codex
+
+'''
+== Session 001 — JSON LDD, SQL LMD, Cartographie Ontologique
+
+*Date* : 2026-05-07
+*Type* : design
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : —
+
+*Objectif* :
+- Affiner la vision du pipeline d'acquisition documentaire
+- Structuration relationnelle du corpus livresque comme préalable ontologique
+
+*Livrables* :
+- Chapitre "La Structuration Relationnelle du Livre" dans AUGMENTED_CONTEXT_PIPELINE.adoc (~300 lignes)
+- Flux complet : PDF → AsciiDoc structuré → JSON LDD → SQL LMD → ontologie calculée
+- 3 requêtes SQL archétypales (hiérarchie des patterns, graphe de dépendances, cooccurrence d'entités)
+- 4 nouvelles tâches Gradle ajoutées à la roadmap (CDX-1a→1d)
+- Référence au livre Applied AI for Enterprise Java Development (O'Reilly, 2025)
+
+*Décisions clés* :
+- AsciiDoc d'abord → JSON après. Le .adoc est auditable par l'humain, le JSON est dérivé
+- JSON = LDD (décrit la structure), SQL = LMD (interroge la structure)
+- L'ontologie est calculée par requêtage statistique : DDD par induction sur corpus structuré
+- Les 4 nouvelles tâches s'intercalent entre codexChunk et assembleCompositeContext
+- Le développement par surveillance devient exécutable via LangGraph4j (routing + pause/reprise)

@@ -4,7 +4,7 @@
 :icons: font
 :sectnums:
 :author: cheroliv + opencode (deepseek-v4-pro)
-:date: 2026-05-06
+:date: 2026-05-07
 
 [abstract]
 --
@@ -1754,6 +1754,271 @@ LANGCHAIN4J → DeepSeek-v4-pro → stdout structuré
 [RESULT] {"indexed": 312, "zone": "office", "type": "book", "title": "Applied AI for Enterprise Java Development"}
 [ERROR] null
 ----
+
+== La Structuration Relationnelle du Livre — JSON LDD, SQL LMD, Cartographie Ontologique
+
+=== La conversation du 7 mai 2026
+
+Ce chapitre capture une conversation tenue le 7 mai 2026 entre cheroliv et
+opencode (deepseek-v4-pro). Elle affine la vision du pipeline d'acquisition
+documentaire en posant une couche de raffinement supplémentaire :
+la **structuration relationnelle du corpus livresque** comme préalable à
+toute cartographie ontologique automatisée.
+
+=== Le diagnostic initial
+
+Le plugin `codex-pdf` (chapitre <<codex>>) extrait des blocs typographiques —
+`TITLE`, `CODE`, `BODY`, etc. — et les chunk pour le RAG. Mais le chunking
+RAG, même sémantique, ne capture pas la structure *relationnelle* d'un livre :
+les dépendances entre chapitres, la hiérarchie des concepts introduits, les
+références croisées explicites, les patrons de cooccurrence d'entités.
+
+Le RAG répond à "trouve-moi le passage qui ressemble à ma question". Il ne
+répond pas à "montre-moi comment les concepts de ce livre s'articulent entre
+eux". Or, pour le Planning Expert et le développement par surveillance,
+c'est précisément cette articulation qui compte.
+
+=== La thèse : JSON LDD → SQL LMD → ontologie calculée
+
+L'idée-force est de modéliser le livre comme une structure de données
+relationnelle :
+
+*Le JSON est le LDD (Langage de Définition des Données)* — il décrit le schéma
+canonique du livre : parties, chapitres, sections, entités mentionnées,
+références croisées, blocs de code. Ce schéma est le même pour tout livre
+technique, même si chaque livre a sa propre topologie interne.
+
+*Le SQL est le LMD (Langage de Manipulation des Données)* — une fois le livre
+importé en base relationnelle, on peut le requêter, le joindre, le filtrer,
+l'agréger. On passe de "je cherche un passage" à "je comprends le livre".
+
+*L'ontologie est calculée, pas devinée* — les bounded contexts, agrégats et
+value objects du domaine émergent du requêtage statistique sur le corpus
+structuré. Ce n'est pas une hypothèse a priori : c'est le résultat d'un
+`SELECT ... GROUP BY ... HAVING COUNT(*) > N`.
+
+=== Le flux complet
+
+[source]
+----
+PDF (brut, non structuré)
+    │
+    ▼
+PDFBox + PDFStreamEngine → analyse typographique
+    │  Détection : titres (taille police), blocs code (fonte monospace),
+    │  callouts (fond grisé), multi-colonnes (XY position)
+    ▼
+AsciiDoc structuré (.adoc)
+    │  Hiérarchie restaurée : = Chapitre, == Section, === Sous-section
+    │  Blocs [source,java], notes, tables, références croisées
+    │  AUDITABLE PAR L'HUMAIN — on ouvre le .adoc et on vérifie
+    ▼
+JSON LDD (modèle relationnel du livre)
+    │  {
+    │    "book": { "isbn": "...", "title": "...", "authors": [...] },
+    │    "parts": [{ "chapters": [{
+    │      "sections": [{ "entities": [...], "code_blocks": [...] }],
+    │      "cross_references": [{ "from": "...", "to": "...", "type": "..." }]
+    │    }] }]
+    │  }
+    ▼
+Import SQL (PostgreSQL)
+    │  DDL : CREATE TABLE book, part, chapter, section, entity, cross_reference...
+    │  INSERT à partir du JSON LDD parsé
+    ▼
+SQL LMD — requêtage ontologique
+    │  Requête 1 : hiérarchie des patterns (ordre d'introduction par chapitre)
+    │  Requête 2 : graphe de dépendances inter-chapitres
+    │  Requête 3 : bounded contexts candidats par cooccurrence d'entités
+    ▼
+Cartographie ontologique automatique
+    │  Bounded contexts, agrégats, value objects — calculés, pas devinés
+    │  Sortie : JSON-L pour Graphify + documentation AsciiDoc + schéma SQL enrichi
+    ▼
+Vecteur composite (RAG pgvector + KG Graphify + Modèle Métier SQL)
+    │
+    ▼
+LangChain4j → DeepSeek-v4-pro → stdout structuré
+----
+
+=== Pourquoi AsciiDoc d'abord et pas JSON directement ?
+
+Le flux `PDF → JSON` est une tentation — moins d'étapes, pipeline plus court.
+Mais c'est une erreur architecturale pour trois raisons :
+
+. *L'AsciiDoc capte l'intention structurelle de l'auteur* — les niveaux de
+titres (`=`, `==`, `===`), les blocs de code (`[source,java]`), les callouts,
+les tables. C'est un format qui *sait* représenter la hiérarchie d'un livre.
+Le JSON, lui, ne sait pas — il faut déjà avoir décidé du schéma avant de
+mapper. L'AsciiDoc est le format intermédiaire qui préserve la structure sans
+préjuger du modèle.
+
+. *Auditabilité humaine* — on ouvre le `.adoc`, on voit immédiatement si
+l'extraction est fidèle au PDF source. Un JSON de 16 000 lignes de contenu
+brut, personne ne le relit intégralement. La boucle de vérification est
+cassée si on saute l'étape AsciiDoc.
+
+. *AsciidoctorJ → JSON est déterministe* — une fois le `.adoc` structuré
+validé, en extraire le JSON LDD est un simple walk d'AST AsciidoctorJ
+(dépendance déjà présente dans `doc-pipeline/build.gradle.kts`). Ce n'est
+pas une seconde extraction qui pourrait diverger du PDF source — c'est une
+transformation déterministe sur une représentation déjà validée.
+
+=== Ce que le LMD débloque concrètement
+
+==== Exemple sur le livre Applied AI for Enterprise Java Development
+
+Le livre d'Alex Soto Bueno, Markus Eisele et Natale Vinto (O'Reilly, 2025)
+couvre LangChain4j aux chapitres 8-9 et LangGraph4j au chapitre 10. Une fois
+importé en base, trois requêtes suffisent à cartographier son ontologie :
+
+*Requête 1 — Lignage des patterns (l'ontologie de l'auteur) :*
+[source,sql]
+----
+SELECT c.number AS chapter, s.title AS section, e.name AS entity, e.type
+FROM entity e
+JOIN section s ON e.section_id = s.id
+JOIN chapter c ON s.chapter_id = c.id
+WHERE c.number BETWEEN 8 AND 10
+ORDER BY c.number, s.order_in_chapter;
+----
+→ Sortie : `Tool` introduit chap 8 → `Agent` chap 8 advanced → `Routing Agent`
+chap 10 → `CheckpointSaver` chap 10. La hiérarchie émerge du séquencement
+même des chapitres.
+
+*Requête 2 — Graphe de dépendances inter-chapitres :*
+[source,sql]
+----
+SELECT c1.title AS introduced_in, c2.title AS reused_in, cr.type
+FROM cross_reference cr
+JOIN chapter c1 ON cr.from_chapter = c1.id
+JOIN chapter c2 ON cr.to_chapter = c2.id
+WHERE cr.type IN ('prerequisite', 'concept_application', 'pattern_reuse')
+ORDER BY c1.number;
+----
+→ Sortie : `MCP/A2A (chap 4)` est prerequisite de `Routing Agents (chap 10)`,
+`Tool Calling (chap 8)` est pattern_reuse dans `Human Interaction (chap 10)`.
+Le livre documente lui-même sa propre architecture conceptuelle — le LMD
+l'explicite.
+
+*Requête 3 — Bounded contexts candidats par cooccurrence :*
+[source,sql]
+----
+SELECT e1.name, e2.name, COUNT(*) AS cooccurrences
+FROM entity_mention e1
+JOIN entity_mention e2 ON e1.section_id = e2.section_id AND e1.name < e2.name
+GROUP BY e1.name, e2.name
+HAVING COUNT(*) > 2
+ORDER BY cooccurrences DESC;
+----
+→ Sortie : `LangGraph4j + State + CheckpointSaver` cooccurrent 12 fois →
+bounded context `Orchestration`. `LangChain4j + ChatModel + Prompt + AiServices`
+cooccurrent 18 fois → bounded context `Interaction`. Les agrégats ne sont pas
+supposés — ils sont *calculés* par densité relationnelle.
+
+==== Généralisation à tout corpus technique
+
+Le même jeu de requêtes s'applique à n'importe quel livre technique importé
+en base :
+* *Hiérarchie des patterns* → comment l'auteur a intentionnellement séquencé
+  ses concepts
+* *Graphe de dépendances* → quels chapitres sont prérequis de quels autres
+* *Cooccurrence d'entités* → quels concepts forment des clusters naturels =
+  candidats bounded contexts
+
+À l'échelle de `office/books-collection/` (plusieurs dizaines de livres),
+le LMD permet des requêtes *cross-books* :
+* "Quels livres introduisent `LangGraph4j` avant `LangChain4j` ?"
+* "Dans quels livres `pgvector` et `Graphify` sont-ils traités dans le même chapitre ?"
+* "Quel est le livre qui couvre le plus de patterns du domaine `Orchestration` ?"
+
+=== Intégration avec LangGraph4j : le développement par surveillance
+
+Les patterns documentés dans le chapitre 10 du livre Applied AI (Routing
+Agents, Human Interaction, Advanced RAG Self-Reflection) fournissent le
+squelette technique pour le **développement par surveillance** — le mode
+où le Planning Expert produit un plan d'exécution, le graphe LangGraph4j
+l'exécute pas à pas, et l'humain n'intervient qu'aux points de décision.
+
+Une fois le livre en base, le Planning Expert peut :
+* Consulter le LMD pour connaître les patterns d'orchestration disponibles
+* Générer un graphe LangGraph4j qui route vers les bonnes tâches Gradle
+* Configurer les `interruptBefore` aux nœuds où l'humain doit valider
+* Utiliser le `CheckpointSaver` pour la reprise après décision humaine
+
+La boucle dialectique _Intention → Capital fixe → Artefact_ du
+`PLANNING_EXPERT_ONTOLOGY.adoc` devient exécutable directement.
+
+=== Extension des tâches Gradle du pipeline
+
+Le chapitre <<codex>> définit trois tâches (`codexExtract`, `codexChunk`,
+`codexIngest`). La structuration relationnelle en ajoute quatre :
+
+[cols="1,2,3", options="header"]
+|===
+| Tâche | Direction | Ce qu'elle fait
+| `extractBookStructure` | PDF → AsciiDoc structuré | PDFBox + PDFStreamEngine →
+restauration hiérarchique → `.adoc` validé manuellement
+| `asciiDocToJsonLdd` | AsciiDoc → JSON LDD | Walk d'AST AsciidoctorJ → modèle
+relationnel du livre (parties, chapitres, sections, entités, cross-refs)
+| `importBookSql` | JSON LDD → PostgreSQL | Génération DDL + INSERT → base
+relationnelle requêtable
+| `deriveOntology` | SQL LMD → cartographie | Requêtes d'agrégation (hiérarchie,
+dépendances, cooccurrence) → bounded contexts candidats + graphe de concepts
+|===
+
+Ces quatre tâches s'intercalent entre `codexChunk` et l'assemblage du vecteur
+composite dans `assembleCompositeContext`. Le RAG reste alimenté par les chunks
+(usage similarité), mais la composante SQL du vecteur composite est désormais
+alimentée par le LMD (usage relationnel + ontologique).
+
+=== La référence : Applied AI for Enterprise Java Development
+
+Le livre d'Alex Soto Bueno, Markus Eisele et Natale Vinto (O'Reilly, novembre
+2025, ISBN 978-1-098-17675-4) est le document de référence pour toute
+l'implémentation LangChain4j + LangGraph4j du pipeline. Il couvre :
+
+* *Chapitre 4* — Architectures AI : MCP, A2A, agents, Drools, Wanaku
+* *Chapitre 8* — LangChain4j : `ChatModel`, `AiServices`, prompts structurés,
+  mémoire, RAG, tools/agents
+* *Chapitre 9* — RAG avancé : ingestion, retrieval, query transformation, routing
+* *Chapitre 10* — LangGraph4j : StateGraph, nœuds, arêtes conditionnelles,
+  routing agents, human interaction (pause/reprise), advanced RAG self-reflection
+* *Chapitre 12* — Sujets avancés : guardrails, monitoring, gouvernance
+
+Son extraction complète (PDF → AsciiDoc → JSON LDD → SQL) sera le premier test
+grandeur nature du pipeline relationnel. Le `.adoc` brut est déjà acquis dans
+`office/pilotage/codex-gradle/images/Enterprise_Java_Design_Patterns_in_the_Cloud_Native_Era/`.
+
+=== Ce que cette couche change dans la roadmap
+
+[cols="1,2", options="header"]
+|===
+| Avant cette conversation | Après cette conversation
+| `codex` alimente le RAG pgvector | `codex` alimente le RAG pgvector **et**
+la base relationnelle SQL
+| Le vecteur composite = RAG + KG + SQL (structurel) | Le vecteur composite =
+RAG + KG + SQL (structurel **ET** ontologique — calculé par LMD)
+| Cartographie manuelle des bounded contexts | Cartographie automatique par
+requêtage statistique sur corpus structuré
+| Planning Expert sans visibilité sur l'articulation des concepts | Planning
+Expert avec accès au graphe de dépendances inter-chapitres du corpus
+| Développement par surveillance = concept théorique | Développement par
+surveillance = graphe LangGraph4j avec routing + pause/reprise + outils Gradle,
+alimenté par la connaissance extraite du corpus
+|===
+
+=== Le principe fondamental
+
+> Le JSON est le LDD du livre — il décrit sa structure.
+> Le SQL est le LMD du livre — il permet de l'interroger.
+> L'ontologie du domaine n'est pas une hypothèse de conception —
+> c'est le résultat d'un `SELECT ... GROUP BY ... HAVING COUNT(*) > N`
+> exécuté sur la représentation relationnelle du corpus.
+
+C'est du **DDD par induction statistique sur corpus structuré**. Le LDD donne
+la topologie. Le LMD donne la densité relationnelle. Les bounded contexts ne
+sont pas devinés — ils sont *calculés*.
 
 == Synthèse — Le Cinquième Document du Jardin Secret
 

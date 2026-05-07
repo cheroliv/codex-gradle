@@ -1,0 +1,26 @@
+= Session 001 — JSON LDD, SQL LMD, Cartographie Ontologique
+
+*Date* : 2026-05-07
+*Type* : design
+*Modèle* : deepseek-v4-pro (via opencode)
+
+*Objectif* :
+- Affiner la vision du pipeline d'acquisition documentaire
+- Définir la structuration relationnelle du corpus livresque comme préalable
+- Spécifier le flux PDF → AsciiDoc → JSON LDD → SQL LMD → cartographie ontologique
+
+*Livrables* :
+- Chapitre "La Structuration Relationnelle du Livre" dans AUGMENTED_CONTEXT_PIPELINE.adoc
+- Clarification du flux : AsciiDoc d'abord (pas JSON directement), pour auditabilité humaine
+- Spécification JSON LDD : parties, chapitres, sections, entités, cross_references
+- Spécification SQL LMD : 3 requêtes archétypales (hiérarchie, dépendances, cooccurrence)
+- Intégration avec LangGraph4j : développement par surveillance rendu exécutable
+- Extension roadmap : 4 nouvelles tâches (extractBookStructure, asciiDocToJsonLdd, importBookSql, deriveOntology)
+- Référence au livre Applied AI for Enterprise Java Development comme premier test
+
+*Décisions clés* :
+- AsciiDoc d'abord → JSON après (pas l'inverse)
+- JSON = LDD (décrit la structure), SQL = LMD (interroge la structure)
+- Ontologie calculée par requêtage statistique, pas devinée a priori
+- Les 4 nouvelles tâches s'intercalent entre codexChunk et assembleCompositeContext
+- Le livre de Soto Bueno/Eisele/Vinto est le premier corpus test
