@@ -107,4 +107,6 @@ Historique des sessions de developpement du plugin codex-gradle.
 - Premier jalon : 5 tâches, 1 dossier, 1 livre. Quand ça tourne, le vibecoding passe sous testostérone
 - Livre Applied AI choisi stratégiquement : c'est le manuel de construction du moteur
 - LangChain4j + LangGraph4j = le capital fixe qui permet au pipeline de s'écrire lui-même
+- Double mission d'Edster : former des humains ET former des experts IA
+- Les experts IA (employés synthétiques) arriveront avant la formation humaine — ordre inversé par nécessité technique
 - Tout le reste (library, trainer, reason, Bloom) = raffinement utile mais pas bloquant

@@ -23,6 +23,13 @@ Copilot) — dont le contexte est déjà augmenté par le vecteur composite
 lui-même. Le canal de communication est le stdout, le contrat est la tâche
 Gradle typée, le pont est LangChain4j._
 
+_La mission d'Edster.cloud est double : former des apprenants humains
+(écoles, entreprises, OPCO) et former des experts IA — des employés
+synthétiques fine-tunés par le pipeline de connaissance. La formation
+d'expert IA arrivera avant la formation professionnelle humaine : les
+experts sont le multiplicateur de productivité qui rendra la formation
+humaine économiquement viable à grande échelle._
+
 Ce document capture l'essence intrinsèque du workspace en mai 2026 — son stade
 actuel de développement, sa contradiction motrice, et la voie de résolution.
 
@@ -4693,6 +4700,77 @@ construit lui-même.
 > à faire des chatbots. On le choisit parce que c'est le manuel de
 > construction du moteur. Le train vient après la locomotive. Et la
 > locomotive, c'est le pipeline qui s'écrit avec le pipeline.
+
+==== La double mission d'Edster — et l'ordre d'arrivée
+
+Edster.cloud n'est pas un SaaS mono-produit. Il porte deux missions qui
+partagent la même infrastructure mais suivent des trajectoires temporelles
+inverses.
+
+*Mission 1 — Former des apprenants humains* ::
+C'est la finalité économique. Le market fit est là — un organisme de
+formation qui produit son matériel pédagogique 10x plus vite, avec
+traçabilité Qualiopi, ancrage Bloom, et références bibliographiques
+auditables. Les clients sont les OPCO, les entreprises, les écoles.
+
+*Mission 2 — Former des experts IA* ::
+C'est la finalité technique. Edster embauche des experts — des modèles
+fine-tunés comme l'Expert CDA ou l'Expert FPA — et les forme avec le
+pipeline de connaissance. Ces experts ne sont pas un produit vendu aux
+clients. Ils sont les *employés synthétiques* d'Edster — sa force de
+travail interne.
+
+Et c'est là que l'ordre d'arrivée s'inverse.
+
+**La formation d'expert IA arrivera avant la formation professionnelle
+humaine.** Pas par choix de marché — par nécessité technique.
+
+Un formateur humain ne peut pas générer manuellement le volume de contenu
+pédagogique que le marché demande. Edster non plus, s'il opère sans
+experts. Mais un Expert CDA formé par le pipeline peut générer des
+exercices Kotlin/Gradle annotés Bloom en quelques secondes. Un Expert FPA
+peut structurer une séquence pédagogique conforme Qualiopi en une
+inférence.
+
+Les experts sont le *multiplicateur de productivité* qui rend la formation
+humaine économiquement viable. Sans eux, Edster est un SaaS vide — capable
+de provisionner des workspaces mais incapable de les remplir. Avec eux,
+chaque workspace provisionné est immédiatement augmenté d'un expert
+capable de générer, corriger, et adapter du contenu.
+
+**La séquence temporelle réelle :**
+
+[source]
+----
+1. Pipeline de connaissance (codex, enrichissement, bibliothèque)
+       ↓
+2. LLM Trainer → Experte CDA, Expert FPA (employés synthétiques)
+       ↓
+3. Planning Expert + outils de raisonnement (supervision)
+       ↓
+4. Les experts produisent du matériel pédagogique (formation humaine)
+       ↓  ← CECI est le produit vendable
+5. Edster SaaS → clients (OPCO, entreprises, écoles)
+----
+
+Les étapes 1 à 3 sont l'infrastructure. L'étape 4 est la production.
+L'étape 5 est la commercialisation.
+
+Aujourd'hui, le monde de l'EdTech essaie d'aller directement à l'étape 4
+sans passer par 1-2-3. Ils construisent des LMS avec un peu d'IA générative
+greffée dessus. Le résultat est prévisible : du contenu générique, non
+traçable, non auditable, sans ontologie ni Bloom. Une locomotive du 19e
+siècle.
+
+Edster fait l'inverse. Il retarde la commercialisation pour construire
+d'abord les experts — la seule couche qui garantit que le contenu généré
+sera de qualité, spécifique au domaine, et juridiquement défendable.
+
+> Edster.cloud forme des humains. Mais d'abord, il forme les experts
+> IA qui formeront les humains. La première promotion d'Edster n'est
+> pas une classe de stagiaires — c'est une équipe d'employés
+> synthétiques. Leur diplôme, c'est le build vert. Leur premier poste,
+> c'est la génération de formations. Leur carrière, c'est le retrain.
 
 == Synthèse — Le Cinquième Document du Jardin Secret
 
