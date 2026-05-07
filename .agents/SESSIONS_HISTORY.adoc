@@ -84,3 +84,25 @@ Historique des sessions de developpement du plugin codex-gradle.
 - codebase-gradle absorbe les couches Code (annotate, delta, diagnose, deps)
 - Mill validé comme runtime alternatif, Gradle = capital fixe
 - Pattern existant répliqué : chaque dossier = plugin Gradle indépendant
+
+'''
+== Session 003 — Le Vrai MVP : Boucle d'Autonomie
+
+*Date* : 2026-05-07
+*Type* : design (priorisation)
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : —
+
+*Objectif* :
+- Identifier le vrai MVP : la boucle d'autonomie pour le vibecoding
+- Prioriser l'écriture des plugins et du SaaS comme première cible
+
+*Livrables* :
+- Section "Le Vrai MVP — La Boucle d'Autonomie pour le Vibecoding" dans AUGMENTED_CONTEXT_PIPELINE.adoc
+- Premier jalon concret : codex-pdf extrait Applied AI → JSON LDD → pgvector → assembleCompositeContext → opencode lit le contexte augmenté
+
+*Décisions clés* :
+- Le vrai MVP n'est pas Edster — c'est la boucle auto-accélératrice contexte → vibecoding → plugin → contexte
+- La première cible est l'écriture des plugins et du SaaS, pas la génération de formations
+- Premier jalon : 5 tâches, 1 dossier, 1 livre. Quand ça tourne, le vibecoding passe sous testostérone
+- Tout le reste (library, trainer, reason, Bloom) = raffinement utile mais pas bloquant

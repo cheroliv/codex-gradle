@@ -1,29 +1,24 @@
 = PROMPT_REPRISE — codex-gradle
 
 '''
-== Resume de la derniere session (Session 002 — 2026-05-07 — Clôture/Bouclage)
+== Resume de la derniere session (Session 003 — 2026-05-07 — Priorisation)
 
-*Objectif* : Séparer les concerns du pipeline en bounded contexts physiques distincts
-+ boucler la session dialectique du 6-7 mai.
+*Objectif* : Identifier le vrai MVP : la boucle d'autonomie pour le vibecoding.
 
 *Ce qui a ete fait* :
-- Ajout de la section "Séparation des Concerns" dans AUGMENTED_CONTEXT_PIPELINE.adoc
-- Cartographie physique : codex-gradle (acquisition), library-gradle (bibliothèque, nouveau),
-  codebase-gradle (couches Code, à étendre), trainer-gradle (LLM Trainer, nouveau),
-  engine (orchestration N3), codex-conventions-gradle (DSL partagé, nouveau)
-- Analyse Mill : millBakerPlugin analysé (107 lignes Scala vs 400+ Kotlin)
-- Comparaison Gradle vs Mill documentée
-- Document final à 4615 lignes
+- Ajout de la section "Le Vrai MVP — La Boucle d'Autonomie pour le Vibecoding"
+  dans AUGMENTED_CONTEXT_PIPELINE.adoc
+- Premier jalon concret défini : codex-pdf extrait Applied AI → JSON LDD → pgvector
+  → assembleCompositeContext → opencode lit le contexte augmenté
+- Priorité réaffirmée : plugins et SaaS d'abord, formations ensuite
 
 *Prochaine étape* : CDX-1a — Implémenter `extractBookStructure` (PDFBox + PDFStreamEngine → AsciiDoc structuré)
 
 *Fichiers critiques a charger en EAGER* :
 - `AGENT.adoc`
 - `AUGMENTED_CONTEXT_PIPELINE.adoc` — le document complet
-- `PLAN_ATTAQUE_DOC_PIPELINE.adoc`
 
 *Codebases de reference LAZY* :
 - `foundry/jhipster-gradle-plugins/` (pattern parent)
 - `foundry/engine/` (hub N3)
 - `office/books-collection/` (source PDFs)
-- `sources/draft/millBakerPlugin/` (exemple Mill)

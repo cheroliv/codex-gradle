@@ -4527,6 +4527,134 @@ foundry/
 > graphify-gradle → engine/ — appliqué à tout l'écosystème de
 > connaissance.
 
+=== Le Vrai MVP — La Boucle d'Autonomie pour le Vibecoding
+
+==== La priorité réelle
+
+Toute la documentation produite — 4588 lignes, sept bounded contexts, cinq
+plugins, vingt-et-un outils de raisonnement, un LLM Trainer — est une
+spécification du futur. Mais la priorité n'est pas le futur. La priorité
+est le **présent** : le vibecoding avec opencode.
+
+Aujourd'hui, chaque session opencode commence avec un contexte limité.
+Gemma 4 reçoit `PROMPT_REPRISE.adoc` et quelques fichiers EAGER — ~800
+tokens de mémoire statique. Le LLM lourd (DeepSeek-v4-pro) est appelé
+sans contexte augmenté. Chaque session redécouvre ce que la session
+précédente avait compris. Il n'y a pas d'apprentissage cumulatif entre
+sessions.
+
+Le vrai MVP n'est pas Edster, ni la capsule vidéo, ni l'anonymiseur.
+Le vrai MVP est une **boucle d'autonomie** où opencode reçoit, à chaque
+session, le contexte augmenté du système qu'il est en train de construire.
+
+==== La boucle : Contexte Augmenté → Vibecoding → Plugin → Contexte Augmenté
+
+[source]
+----
+SESSION OUVERTE (opencode + Gemma 4)
+    │
+    ├── 1. assembleCompositeContext
+    │       RAG (pgvector) : docs des plugins existants, code source indexé
+    │       KG (Graphify)  : graphe de dépendances inter-plugins, imports
+    │       SQL (LMD)      : modèle métier des plugins (bounded contexts)
+    │       Delta           : ce qui a changé depuis le dernier commit
+    │       Bloom           : niveau de maîtrise par concept
+    │       → CONTEXTE AUGMENTÉ INJECTÉ DANS LA SESSION
+    │
+    ├── 2. Gemma 4 reçoit l'intention ("écris CDX-1a : PDFStreamEngine → AsciiDoc")
+    │       → Décompose avec contexte augmenté (sait déjà où est le code,
+    │         quelles dépendances sont disponibles, quels patterns existent)
+    │       → Route vers les tâches Gradle appropriées
+    │
+    ├── 3. Les tâches Gradle exécutent (codexExtract, codexChunk, etc.)
+    │       → DeepSeek-v4-pro génère le code avec le contexte augmenté
+    │       → Tests passent (ou pas)
+    │       → Build vert (ou rouge)
+    │
+    ├── 4. Le code produit EST du plugin Gradle
+    │       → Le plugin s'ajoute au pipeline
+    │       → Sa doc est indexée dans pgvector
+    │       → Ses imports enrichissent Graphify
+    │       → Son build vert/rouge met à jour le delta
+    │       → Le contexte augmenté de la PROCHAINE session est plus riche
+    │
+    └── 5. Prochaine session : retour à l'étape 1, avec plus de contexte
+            → Le pipeline s'accélère lui-même
+            → Chaque plugin écrit rend le prochain plugin plus facile à écrire
+----
+
+C'est une **boucle auto-accélératrice**. Le vibecoding d'aujourd'hui produit
+du code. Ce code est un plugin. Ce plugin est indexé dans le pipeline. Le
+pipeline augmente le contexte. Le vibecoding de demain est plus rapide,
+plus informé, plus autonome.
+
+==== La dédicace première : plugins et SaaS
+
+La boucle d'autonomie n'est pas destinée en premier à la génération de
+formations. Elle est destinée à **l'écriture des plugins eux-mêmes** et du
+**SaaS Edster**.
+
+Pourquoi ? Parce que c'est le chemin le plus court vers l'autonomie réelle :
+
+- *Écrire codex-pdf* → le PDF est extrait → le corpus s'enrichit
+- *Écrire library-gradle* → les livres sont croisés → les relations émergent
+- *Écrire trainer-gradle* → les experts sont formés → le Planning Expert a des outils
+- *Écrire engine/reason* → le raisonnement est disponible → les décisions sont assistées
+- *Écrire Edster* → le SaaS existe → le pipeline est vendable
+
+Chaque plugin écrit **augmente** le contexte du plugin suivant. C'est le
+contraire d'un projet classique où chaque module ajoute de la dette technique.
+Ici, chaque module réduit la dette *cognitive* du module suivant — le LLM en
+sait plus, donc il se trompe moins.
+
+==== Ce qui change dans le cycle de développement
+
+*Sans contexte augmenté (état actuel) :*
+- opencode reçoit 800 tokens EAGER
+- Gemma 4 route vers des tâches Gradle sans savoir ce qu'elles contiennent
+- DeepSeek génère du code sans connaître les patterns existants
+- Le build échoue → Gemma 4 corrige → le build réussit → on oublie pourquoi
+- Session suivante : retour à zéro
+
+*Avec contexte augmenté (cible) :*
+- opencode reçoit le vecteur composite complet (RAG + KG + SQL + Delta + Bloom)
+- Gemma 4 sait exactement quel plugin fait quoi, où est le code, quelles dépendances sont disponibles
+- DeepSeek génère du code ancré dans les patterns documentés, avec @ConceptSource
+- Le build réussit plus souvent (meilleur contexte = moins d'erreurs)
+- L'échec est diagnostiqué automatiquement (`diagnoseFailure`)
+- Session suivante : le contexte inclut les résultats de la session précédente
+- Le Planning Expert peut planifier des EPICs sans intervention humaine
+- **L'humain passe de codeur à superviseur**
+
+==== Le premier jalon concret
+
+Pas besoin de sept dossiers, de Trainer, de bibliothèque cross-books.
+
+Le premier jalon c'est : **codex-pdf extrait Applied AI → JSON LDD → pgvector → assembleCompositeContext → opencode lit le contexte augmenté**.
+
+Cinq tâches, un seul dossier (`codex-gradle`), un seul livre. Quand cette
+boucle tourne, le vibecoding passe sous testostérone. Le Planning Expert
+peut décomposer une intention en sachant ce que le code contient. DeepSeek
+peut générer en sachant ce que le corpus documente.
+
+Tout le reste — library, trainer, reason, Bloom — est du raffinement.
+Utile, spécifié, mais pas bloquant pour le premier cycle d'autonomie.
+
+==== Le principe du vrai MVP
+
+> Le vrai MVP n'est pas un produit vendable. C'est une **boucle
+> d'auto-accélération** : le contexte augmenté rend le vibecoding plus
+> efficace, le vibecoding produit des plugins, les plugins enrichissent
+> le contexte, le contexte rend le prochain vibecoding encore plus
+> efficace.
+>
+> La première cible de cette boucle est l'écriture des plugins et du
+> SaaS eux-mêmes. Le pipeline se construit avec le pipeline. C'est le
+> pattern ultime du dogfooding : l'outil qui s'écrit lui-même.
+>
+> Une fois cette boucle établie, la génération de formations est une
+> conséquence naturelle — le même pipeline, une cible différente.
+
 == Synthèse — Le Cinquième Document du Jardin Secret
 
 Ce document est le **cinquième document du jardin secret**, complétant :
@@ -4584,5 +4712,5 @@ Maintenant il l'est.
 
 [.text-right]
 *Document initié le 6 mai 2026 — enrichi le 7 mai 2026.*
-*Session dialectique complète : définition du MVP0 fondamental, structuration relationnelle du corpus (JSON LDD → SQL LMD), enrichissement croisé (RAG + Graphify), bibliothèque systémique cross-books (5 critères), taxonomie de Bloom, couches d'augmentation Code/Delta/Erreurs/Dépendances, outils de raisonnement (21 modes), LLM Trainer et modèle canonique de l'expert, Gradle comme conscience du projet, comparaison Mill, séparation des concerns en 7 bounded contexts.*
-*Cinquième document du jardin secret — 4615 lignes.*
+*Session dialectique complète : définition du MVP0 fondamental → structuration relationnelle du corpus (JSON LDD → SQL LMD) → enrichissement croisé (RAG + Graphify) → bibliothèque systémique cross-books (5 critères) → taxonomie de Bloom → couches d'augmentation Code/Delta/Erreurs/Dépendances → outils de raisonnement (21 modes) → LLM Trainer et modèle canonique de l'expert → Gradle comme conscience du projet → comparaison Mill → séparation des concerns en 7 bounded contexts → Vrai MVP : la boucle d'autonomie pour le vibecoding.*
+*Cinquième document du jardin secret — 4716 lignes.*

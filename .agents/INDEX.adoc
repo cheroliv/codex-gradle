@@ -6,7 +6,7 @@ _Ontologie spatiale_ : voir `configuration/.agents/AGENT_GOVERNANCE.adoc`
 _DAG_ : N2 — Plugin Gradle d'acquisition de documents (Regle 4bis)
 
 _Derniere mise a jour_ : 2026-05-06
-_Session en cours_ : 002 — Séparation des Concerns & Bouclage
+_Session en cours_ : 003 — Le Vrai MVP : Boucle d'Autonomie
 
 '''
 == REGLES ABSOLUES (resume)
@@ -26,6 +26,7 @@ _Session en cours_ : 002 — Séparation des Concerns & Bouclage
 | 0 | 2026-05-06 | init | Bootstrap gouvernance agent codex + scaffold plugin | —
 | 001 | 2026-05-07 | design | JSON LDD, SQL LMD, Cartographie Ontologique | —
 | 002 | 2026-05-07 | design | Séparation des Concerns & Bouclage | —
+| 003 | 2026-05-07 | design | Le Vrai MVP : Boucle d'Autonomie | —
 |===
 
 '''

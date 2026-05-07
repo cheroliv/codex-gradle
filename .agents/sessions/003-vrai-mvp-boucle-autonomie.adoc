@@ -1,0 +1,26 @@
+= Session 003 — Le Vrai MVP : Boucle d'Autonomie
+
+*Date* : 2026-05-07
+*Type* : design (priorisation)
+*Modèle* : deepseek-v4-pro (via opencode)
+
+*Objectif* :
+- Identifier le vrai MVP : la boucle d'autonomie pour le vibecoding
+- Prioriser l'écriture des plugins et du SaaS comme première cible
+- Ramener toute la documentation à un premier jalon concret
+
+*Livrables* :
+- Section "Le Vrai MVP — La Boucle d'Autonomie pour le Vibecoding"
+- Premier jalon concret : 5 tâches, 1 dossier, 1 livre
+- Boucle : Contexte Augmenté → Vibecoding → Plugin → Contexte Augmenté
+- Comparaison cycle sans/augmenté documentée
+
+*Décisions clés* :
+- Le vrai MVP n'est pas Edster — c'est la boucle auto-accélératrice
+- La première cible de la boucle est l'écriture des plugins et du SaaS
+  (pas la génération de formations — logiquement antérieure)
+- Premier jalon : codex-pdf extrait Applied AI → JSON LDD → pgvector
+  → assembleCompositeContext → opencode lit le contexte augmenté
+- Tout le reste (library, trainer, reason, Bloom avancé) = raffinement
+  utile mais pas bloquant pour le premier cycle
+- Dogfooding ultime : l'outil qui s'écrit lui-même
