@@ -3249,6 +3249,146 @@ Les fichiers `.agents/` sont déjà parsés par `relocalizeAgents`. Mais leur
 est : mention d'un client dans une section taguée Niveau 3. » L'agent audite
 sa propre gouvernance.
 
+*13. Historique brut des conversations IA — opencode / gemini CLI / archives claude-chatgpt*
+Toutes les traces conversationnelles avec les outils d'IA (opencode, Gemini
+CLI, archives exportées de Claude et ChatGPT) constituent un **capital de
+données brutes** d'une nature différente du corpus structuré. Là où le
+JSON LDD capture les livres *lus*, et les sessions `.agents/sessions/`
+capturent le processus *documenté*, les logs conversationnels capturent la
+**mise en pratique effective des outils de la raison** — chaque question
+posée, chaque reformulation, chaque outil invoqué, chaque correction humaine.
+C'est le matériau brut de l'observation dialectique du système en action :
+non pas ce que le pipeline *devrait* faire, mais ce que l'humain et la
+machine *ont effectivement fait ensemble*.
++
+*Ce que cette couche contient spécifiquement :*
+- *opencode* : logs de session complets (`opencode log`), traces de tool use,
+  thinking mode, chaînes de raisonnement observables pas à pas
+- *Gemini CLI* : historiques de conversation Google, prompts + réponses +
+  paramètres de modèle (température, topK, safety settings)
+- *Archives Claude* : exports de conversations Claude.ai / Claude Code,
+  incluant les artifacts, les tool calls, les interruptions humaines
+- *Archives ChatGPT* : exports JSON natifs de ChatGPT (conversations.json),
+  avec l'arborescence complète des nœuds de conversation, les tool calls
+  (Code Interpreter, Web Search, DALL·E), et les feedbacks utilisateur
++
+*Le mappage avec l'historisation Git :*
+Chaque conversation IA a un contexte temporel. Chaque commit a un timestamp,
+un message, un auteur. Le croisement conversation ↔ commit permet de :
+. Associer une session opencode à la séquence de commits qu'elle a produite
+. Mesurer le ratio « tokens conversationnels / lignes de code commitées »
+  — métrique de productivité agentique par session
+. Identifier les patterns de décision : quel outil de raisonnement a été
+  mobilisé avant quel type de commit (ex: `reason -Pmode=abduct` avant
+  un commit de bugfix `fix(auth): NullPointerException`)
+. Cartographier l'évolution dialectique : comment une conversation du
+  3 mai a posé une question, le commit du 4 mai a proposé une réponse,
+  la conversation du 5 mai l'a réfutée, le commit du 6 mai a synthétisé
++
+*La tâche Gradle `importConversationArchive` :*
+[source,kotlin]
+----
+tasks.register<ImportConversationArchive>("importConversationArchive") {
+    sourceDir.set(file(project.findProperty("conversationDir") as String))
+    sourceType.set(project.findProperty("type") as String) // opencode, gemini, claude, chatgpt
+
+    doLast {
+        val conversations = when (sourceType.get()) {
+            "opencode" -> OpenCodeLogParser.parse(sourceDir.get().asFile)
+            "gemini" -> GeminiExporterParser.parse(sourceDir.get().asFile)
+            "claude" -> ClaudeExporterParser.parse(sourceDir.get().asFile)
+            "chatgpt" -> ChatGPTExporterParser.parse(sourceDir.get().asFile)
+            else -> throw GradleException("unsupported conversation source: ${sourceType.get()}")
+        }
+
+        conversations.forEach { conv ->
+            // 1. Extraire les entités (outils, fichiers, concepts mentionnés)
+            // 2. Corréler avec les commits dans la fenêtre temporelle
+            val relatedCommits = findCommitsInWindow(conv.startTime, conv.endTime)
+            val timeline = ConversationCommitTimeline(conv, relatedCommits)
+
+            // 3. Injecter comme corpus conversationnel (zone = conversation)
+            pgvector.insert(
+                embedding = onnx.embed(conv.rawText),
+                metadata = mapOf(
+                    "zone" to "conversation",
+                    "source" to sourceType.get(),
+                    "session_id" to conv.id,
+                    "commits_linked" to relatedCommits.size.toString(),
+                    "tools_used" to conv.toolsUsed.joinToString(","),
+                    "reasoning_patterns" to conv.reasoningPatterns.joinToString(",")
+                )
+            )
+
+            // 4. Enrichir le knowledge graph — nœuds de conversation
+            graphify.upsertNode(
+                id = "conversation:${conv.id}",
+                type = "Conversation",
+                properties = mapOf(
+                    "source" to sourceType.get(),
+                    "duration" to conv.durationMs.toString(),
+                    "messages" to conv.messageCount.toString(),
+                    "tools" to conv.toolsUsed
+                ),
+                edges = relatedCommits.map { commit ->
+                    Edge("produced", "conversation:${conv.id}", "commit:${commit.sha}")
+                }
+            )
+        }
+
+        println("[CTX] conversations_imported=${conversations.size}")
+        println("[CTX] commits_linked=${conversations.sumOf { findCommitsInWindow(it.startTime, it.endTime).size }}")
+        println("[RESULT] {\"conversations\": ${conversations.size}, \"corpus_zone\": \"conversation\"}")
+    }
+}
+----
++
+*La métrique de productivité dialectique :*
+À partir des conversations importées et corrélées aux commits, le pipeline
+calcule un ratio structurant :
+[source,sql]
+----
+SELECT
+    c.id AS conversation_id,
+    c.source AS tool,
+    c.message_count,
+    COUNT(cm.sha) AS commits_produced,
+    SUM(cm.lines_added + cm.lines_deleted) AS code_churn,
+    ROUND(SUM(cm.lines_added + cm.lines_deleted)::numeric / c.message_count, 2)
+      AS code_per_message
+FROM conversation c
+LEFT JOIN conversation_commit_link l ON c.id = l.conversation_id
+LEFT JOIN commit_metrics cm ON l.commit_sha = cm.sha
+GROUP BY c.id, c.source, c.message_count
+ORDER BY code_per_message DESC;
+----
+→ Sortie : le ratio `code_per_message` par outil et par session. Une session
+Gemini qui produit 0 commit pour 200 messages n'a pas la même productivité
+qu'une session opencode qui produit 12 commits pour 45 messages. Ces ratios,
+agrégés sur des mois, documentent l'efficacité réelle de chaque outil et de
+chaque pattern de prompting.
++
+*Ce que cette couche apporte au pipeline :*
+- Elle est la **preuve observable** que les outils de raisonnement sont
+  mobilisés, pas seulement théorisés
+- Elle documente le *style de prompting* par outil : comment l'humain
+  formule-t-il ses demandes sur opencode vs sur Gemini CLI ?
+- Elle permet au Planning Expert d'apprendre de l'historique : « Les 3
+  dernières sessions opencode qui mentionnaient `CircuitBreaker` ont toutes
+  abouti à un commit de refacto dans `auth-module`. Prochaine intention avec
+  `CircuitBreaker` → router vers auth-module d'abord. »
+- Elle alimente le fine-tuning des employés synthétiques : le dataset de
+  conversations réelles est le matériau le plus authentique pour apprendre
+  à un modèle *comment* raisonner dans un contexte de code réel
++
+*Position dans la roadmap :*
+La couche conversationnelle est P2 INDUSTRIALISATION — elle nécessite
+d'abord que les couches Code (Code-to-Corpus Traceability, Change Delta
+Awareness) soient en place pour que le lien conversation ↔ commit soit
+pertinent. Mais la collecte brute (archivage des exports, logs) peut
+commencer immédiatement en P0 comme pratique de sauvegarde du capital
+conversationnel.
+
 === Les Outils de Raisonnement — La Couche de Consommation Intelligente
 
 ==== Le diagnostic
