@@ -5,8 +5,9 @@ _Regles absolues_ : voir `AGENT.adoc`
 _Ontologie spatiale_ : voir `configuration/.agents/AGENT_GOVERNANCE.adoc`
 _DAG_ : N2 — Plugin Gradle d'acquisition de documents (Regle 4bis)
 
-_Derniere mise a jour_ : 2026-05-06
+_Derniere mise a jour_ : 2026-05-07
 _Session en cours_ : 003 — Le Vrai MVP : Boucle d'Autonomie + Livre Applied AI
+_Session inter-session_ : 004 (chore migration chemins foundry/ → foundry/OSS/ dans INDEX.adoc)
 
 '''
 == REGLES ABSOLUES (resume)
@@ -27,6 +28,7 @@ _Session en cours_ : 003 — Le Vrai MVP : Boucle d'Autonomie + Livre Applied AI
 | 001 | 2026-05-07 | design | JSON LDD, SQL LMD, Cartographie Ontologique | —
 | 002 | 2026-05-07 | design | Séparation des Concerns & Bouclage | —
 | 003 | 2026-05-07 | design | Le Vrai MVP : Boucle d'Autonomie | —
+| 004 | 2026-05-07 | chore | Migration chemins foundry/ → foundry/OSS/ (granularisation OSS/CSS) | —
 |===
 
 '''
@@ -42,9 +44,9 @@ _Session en cours_ : 003 — Le Vrai MVP : Boucle d'Autonomie + Livre Applied AI
 | CDX-3 | Task `deriveOntology` — SQL LMD → cartographie ontologique | A FAIRE | P1 | codex-gradle
 | CDX-4 | Task `enrichJsonLdd` — croisement JSON LDD + RAG + Graphify | A FAIRE | P1 | codex-gradle
 | CDX-5 | Task `exportKnowledgeBase` — JSON-L / Markdown / AsciiDoc | A FAIRE | P1 | codex-gradle
-| LIB-0 | Création `foundry/library-gradle/` + gouvernance agent | A FAIRE | P2 | library-gradle
+| LIB-0 | Création `foundry/OSS/library-gradle/` + gouvernance agent | A FAIRE | P2 | library-gradle
 | LIB-1 | Task `assembleLibrary` — agrégation cross-books (5 critères) | A FAIRE | P2 | library-gradle
-| TRN-0 | Création `foundry/trainer-gradle/` + gouvernance agent | A FAIRE | P3 | trainer-gradle
+| TRN-0 | Création `foundry/OSS/trainer-gradle/` + gouvernance agent | A FAIRE | P3 | trainer-gradle
 | TRN-1 | Task `assembleTrainingDataset` | A FAIRE | P3 | trainer-gradle
 | CDX-2 | Détection typographique → hiérarchie de titres | A FAIRE | P0
 | CDX-3 | Task `convertToMarkdown` avec blocs de code | A FAIRE | P0

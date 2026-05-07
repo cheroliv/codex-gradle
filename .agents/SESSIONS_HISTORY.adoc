@@ -110,3 +110,20 @@ Historique des sessions de developpement du plugin codex-gradle.
 - Double mission d'Edster : former des humains ET former des experts IA
 - Les experts IA (employés synthétiques) arriveront avant la formation humaine — ordre inversé par nécessité technique
 - Tout le reste (library, trainer, reason, Bloom) = raffinement utile mais pas bloquant
+
+'''
+== Session 004 — Migration chemins foundry/ → foundry/OSS/ (granularisation OSS/CSS)
+
+*Date* : 2026-05-07
+*Type* : chore
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : —
+
+*Objectif* :
+- Mettre a jour INDEX.adoc pour remplacer `foundry/` par `foundry/OSS/` (granularisation OSS/CSS)
+- Migration transverse sur 9 repos, commit + push
+
+*Livrables* :
+- INDEX.adoc mis a jour
+- PROMPT_REPRISE.adoc mis a jour
+- SESSIONS_HISTORY.adoc : entree session 004

@@ -1,6 +1,13 @@
 = PROMPT_REPRISE — codex-gradle
 
 '''
+== Session 004 — Migration chemins OSS/CSS (inter-session chore)
+
+*Date* : 2026-05-07 | *Type* : chore
+*Resultat* : ✅ INDEX.adoc — remplacement `foundry/` → `foundry/OSS/` pour granularisation OSS/CSS.
+Commit + push.
+
+'''
 == Resume de la derniere session (Session 003 — 2026-05-07 — Priorisation/Bouclage)
 
 *Objectif* : Identifier le vrai MVP + justifier le choix stratégique du livre Applied AI.
