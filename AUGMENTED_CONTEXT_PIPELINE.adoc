@@ -4912,6 +4912,365 @@ sera de qualité, spécifique au domaine, et juridiquement défendable.
 > synthétiques. Leur diplôme, c'est le build vert. Leur premier poste,
 > c'est la génération de formations. Leur carrière, c'est le retrain.
 
+== La Contradiction de l'Autonomie — Le Contrepoids Dialectique
+
+=== Le moment de la contradiction
+
+Le document qui précède spécifie un pipeline capable de percevoir un système,
+de naviguer un corpus, de raisonner sur des données structurées, et de générer
+des artefacts avec un contexte augmenté. Il est tentant, à ce stade, de
+conclure que l'agent est proche de l'autonomie.
+
+Il ne l'est pas.
+
+Ce chapitre est le **moment de l'antithèse** dans la dialectique de conception
+du pipeline. Il identifie ce qui manque pour passer d'un système de perception
+augmentée à un système d'action autonome — et, ce faisant, il produit les
+spécifications concrètes de ce qui doit être construit. C'est la contradiction
+qui devient productive.
+
+Dans la méthode hégélienne, la thèse (le pipeline comme capital fixe, comme
+vecteur composite, comme bibliothèque systémique) appelle son antithèse (les
+limites structurelles de l'autonomie sans garde-fou). La synthèse — les
+mécanismes de sécurité, de budget, de rollback, de seuils de confiance — ne
+peut émerger que de l'affrontement explicite entre les deux. Ce chapitre est
+cet affrontement.
+
+=== Les quatre failles de l'autonomie sans supervision
+
+==== Faille 1 — Le routing non déterministe du cerveau léger
+
+Le document postule que Gemma 4 (cerveau léger, orchestrateur) route
+correctement les intentions vers les tâches Gradle appropriées. Cette
+hypothèse est fragile.
+
+Le routing repose sur le *thinking mode* de Gemma — une capacité émergente
+du LLM, non déterministe, non garantie. Une intention formulée de la même
+manière à deux moments différents peut être routée vers deux tâches
+différentes. En mode synchrone (humain devant opencode), l'erreur de routage
+est visible et corrigible immédiatement. En mode asynchrone (CI/CD, exécution
+nocturne), l'erreur est silencieuse — elle dégrade l'état du workspace sans
+que personne ne le sache avant le prochain `git pull`.
+
+La conséquence est structurelle : le passage à l'autonomie suppose que le
+cerveau léger *ne peut pas se tromper* sur le routage. Or il le peut. Il faut
+donc un mécanisme qui *vérifie* avant d'exécuter, même en mode passif.
+
+.Ce que cette faille implique :
+* Toute tâche autonome doit être précédée d'une **spéculation validable** —
+  un plan d'exécution que le cerveau lourd (DeepSeek) ou un validateur
+  déterministe peut vérifier avant exécution
+* La notion de **sandbox de plan** : le plan est généré, écrit dans un
+  fichier temporaire, validé (structurellement, syntaxiquement), et
+  exécuté *seulement* si le validateur donne son accord
+* Le validateur n'est pas un LLM — c'est du Kotlin typé qui vérifie que
+  la tâche routée existe, que les paramètres sont valides, que les
+  préconditions Gradle sont satisfaites
+
+==== Faille 2 — L'accumulation de dérive LLM sans boucle de vérification
+
+Sur les 21 outils de raisonnement, 5 sont purement PROMPT et 7 sont HYBRIDES.
+Soit 12 outils dont le résultat dépend d'un appel LLM sans garantie de
+correction. Chaque appel PROMPT est un point de dérive potentiel.
+
+En mode passif (CI/CD, exécution en chaîne), une hallucination en début de
+chaîne — une classification erronée, une inférence invalide, une analogie mal
+fondée — corrompt toute la suite des opérations. L'erreur se propage de tâche
+en tâche, chaque étape consommant le résultat vicié de la précédente, sans
+qu'aucun humain n'intercède.
+
+C'est le problème de la **dérive cumulative** : un système purement LLM en
+chaîne n'a pas de mécanisme de correction endogène. Il dérive comme un
+gyroscope sans friction.
+
+.Ce que cette faille implique :
+* Les étapes PROMPT de la chaîne doivent être **isolées** — le résultat
+  d'un appel LLM ne doit pas être consommé directement par un autre appel
+  LLM sans une étape de validation ALGO intermédiaire
+* Le pattern `LLM → ALGO → LLM → ALGO` est structurellement plus sûr que
+  `LLM → LLM → LLM`
+* Une métrique de **drift score** par session : combien d'appels LLM
+  successifs sans validation déterministe ? Si le score dépasse un seuil
+  (ex: 3 appels PROMPT consécutifs), le pipeline interrompt et demande
+  confirmation humaine
+
+==== Faille 3 — La métrique `code_per_message` et le chaînon manquant
+
+Le document postule un lien direct entre conversation IA et commits Git.
+Ce lien existe, mais il n'est ni univoque ni complet.
+
+Une conversation opencode ne produit pas *que* des commits. Elle produit :
+* Des observations non capitalisées (le LLM lit un fichier, commente, ne modifie rien)
+* Des impasses exploratoires (une génération qui ne compile pas, abandonnée)
+* Des reformulations stratégiques (une question posée trois fois différemment
+  avant de trouver la bonne approche)
+* Des validations silencieuses (l'humain lit, approuve mentalement, ne commit rien)
+
+La métrique `code_per_message` capture le *produit fini* de la conversation —
+les commits aboutis. Elle ignore la matière dialectique la plus précieuse :
+les tentatives non abouties, les impasses, les bifurcations. Or c'est
+précisément ce matériau qui documente *comment l'humain et la machine
+raisonnent ensemble*.
+
+Un ratio `code_per_message = 0` sur une session de 200 messages n'est pas un
+échec. C'est potentiellement la session la plus riche en apprentissage — une
+exploration conceptuelle dense qui affine la compréhension mutuelle sans
+produire de code immédiat. Le code viendra à la session suivante, informé par
+cette exploration.
+
+.Ce que cette faille implique :
+* Le lien conversation → commit doit capturer les **intentions non abouties**
+  comme des entités de première classe — des nœuds `Exploration` dans le
+  knowledge graph
+* La métrique pertinente n'est pas `code_per_message` mais
+  `décision_actée / hypothèses_explorées` — le ratio de conversion entre
+  exploration et réalisation
+* Une session qui produit 0 commit mais 50 hypothèses documentées est plus
+  précieuse pour le fine-tuning qu'une session qui produit 10 commits
+  mécaniques sans réflexion
+
+==== Faille 4 — L'absence des trois garde-fous d'autonomie
+
+Le document spécifie un système de perception et de navigation du corpus,
+capable de raisonner et de générer. Mais trois mécanismes élémentaires de
+sécurité sont absents, sans lesquels l'autonomie n'est pas pilotable
+passivement.
+
+===== Garde-fou 1 — Le budget d'autonomie
+
+Un agent autonome ne peut pas tourner indéfiniment. Sans plafond de
+consommation, une boucle CI/CD mal routée ou un raisonnement qui dérive
+peut consommer des ressources indéfiniment — tokens DeepSeek, minutes de
+runner GitHub Actions, écritures pgvector.
+
+[source,kotlin]
+----
+data class AutonomyBudget(
+    val maxSteps: Int = 10,           // nombre max de tâches Gradle enchaînées
+    val maxTokensDeepSeek: Long = 100_000,  // plafond tokens cerveau lourd
+    val maxDurationMinutes: Int = 30,       // timeout de session autonome
+    val maxGitOperations: Int = 5           // nombre max de commits auto
+)
+
+fun isBudgetExhausted(current: SessionState, budget: AutonomyBudget): Boolean {
+    return current.stepsTaken >= budget.maxSteps
+        || current.tokensConsumed >= budget.maxTokensDeepSeek
+        || current.durationMinutes >= budget.maxDurationMinutes
+        || current.gitCommits >= budget.maxGitOperations
+}
+----
+
+Le budget est passé en paramètre Gradle :
+
+[source,bash]
+----
+./gradlew autonomousSession -PmaxSteps=5 -PmaxTokens=50000
+----
+
+Si le budget est épuisé, le pipeline s'arrête et logue l'état dans un commit
+de statut (`feat(status): autonomous session budget exhausted at step 5/10`).
+
+===== Garde-fou 2 — Le rollback automatique
+
+Si le plan généré produit un état incohérent — build rouge, régression des
+tests, corruption de schéma — le pipeline doit pouvoir revenir à l'état
+antérieur sans intervention humaine. Le rollback n'est pas un `git revert`
+manuel fait après coup — c'est une **transaction Git** qui atomise
+l'exécution du plan.
+
+[source,kotlin]
+----
+data class AutonomousTransaction(
+    val plan: ExecutionPlan,
+    val preCommitSha: String,              // SHA avant exécution
+    val postCommitSha: String?,            // SHA après exécution (si succès)
+    val validationResults: List<ValidationStep>,
+    val status: TransactionStatus          // COMMITTED, ROLLED_BACK, PENDING
+)
+
+fun executeTransaction(plan: ExecutionPlan, workspace: File): AutonomousTransaction {
+    val preSha = Git(workspace).head().sha
+
+    try {
+        // 1. Exécuter le plan (étapes ALGO + LLM)
+        val results = plan.execute()
+
+        // 2. Valider : build Gradle + tests + lint
+        val validation = validateWorkspace(workspace)
+
+        if (validation.isSuccess) {
+            val postSha = Git(workspace).commit(
+                message = "feat(autonomous): ${plan.summary}",
+                body = plan.toJson()
+            ).sha
+
+            return AutonomousTransaction(plan, preSha, postSha,
+                validation, TransactionStatus.COMMITTED)
+        } else {
+            // 3. ROLLBACK automatique
+            Git(workspace).reset().setRef(preSha).setMode(HARD).call()
+            Git(workspace).clean().setForce(true).call()
+
+            return AutonomousTransaction(plan, preSha, null,
+                validation, TransactionStatus.ROLLED_BACK)
+        }
+    } catch (e: Exception) {
+        Git(workspace).reset().setRef(preSha).setMode(HARD).call()
+        Git(workspace).clean().setForce(true).call()
+
+        return AutonomousTransaction(plan, preSha, null,
+            listOf(ValidationStep.failed("exception", e.message ?: "unknown error")),
+            TransactionStatus.ROLLED_BACK)
+    }
+}
+----
+
+La transaction est atomique : soit le plan s'exécute entièrement *et* le
+build est vert *et* les tests passent → commit ; soit l'un de ces invariants
+est violé → `git reset --hard` vers le SHA d'avant exécution, `git clean -f`,
+et le workspace est intact. L'humain retrouve son état exact, plus le log de
+ce qui a échoué.
+
+===== Garde-fou 3 — Les seuils de confiance sur les décisions
+
+Le document évoque les interruptions humaines pour deux cas : les patterns
+isolés dans un seul livre, et les contradictions cross-book. Mais il n'y a
+pas de **règle systématique** pour décider quand l'agent doit s'arrêter et
+attendre vs exécuter automatiquement.
+
+La règle doit être paramétrable par niveau d'autonomie, et chaque décision
+doit avoir un score de confiance qui détermine si elle est exécutée ou
+déléguée.
+
+[source,kotlin]
+----
+enum class AutonomyLevel {
+    FULL_MANUAL,          // chaque décision → humain
+    SEMI_AUTONOMOUS,      // ALGO ok, PROMPT → humain
+    HIGH_AUTONOMY,         // tout exécuté sauf confidence < seuil
+    FULL_AUTONOMY          // tout exécuté, log exhaustif
+}
+
+data class DecisionPoint(
+    val task: String,                    // "refactoAgentGovernance"
+    val risk: RiskLevel,                 // CRITICAL, HIGH, MEDIUM, LOW
+    val confidence: Float,               // 0.0 → 1.0
+    val autonomyRequired: AutonomyLevel,
+    var resolvedBy: String? = null       // "auto" ou "human:cheroliv"
+)
+
+enum class RiskLevel {
+    CRITICAL,    // modification du schéma SQL, suppression de données
+    HIGH,         // refacto d'un module core, modification .agents/
+    MEDIUM,       // génération de nouveau code, création de fichier
+    LOW           // formatage, commentaires, documentation
+}
+
+fun shouldAutoExecute(decision: DecisionPoint, level: AutonomyLevel): Boolean {
+    return when (level) {
+        FULL_MANUAL -> false
+        SEMI_AUTONOMOUS -> decision.risk == RiskLevel.LOW
+            && decision.confidence > 0.90f
+        HIGH_AUTONOMY -> decision.risk != RiskLevel.CRITICAL
+            && decision.confidence > 0.85f
+        FULL_AUTONOMY -> decision.confidence > 0.95f
+            || (decision.confidence > 0.85f && decision.risk <= RiskLevel.MEDIUM)
+    }
+}
+----
+
+Le paramètre `-Pautonomy` contrôle le niveau :
+
+[source,bash]
+----
+# Supervision humaine sur toute décision non triviale
+./gradlew autonomousSession -Pautonomy=semi -PmaxSteps=5
+
+# Exécution autonome avec interruption sur CRITICAL uniquement
+./gradlew autonomousSession -Pautonomy=high -Pconfidence=0.92 -PmaxSteps=20
+----
+
+Le nœud LangGraph4j qui orchestre reçoit le niveau d'autonomie comme
+paramètre de construction du graphe. Les arêtes conditionnelles qui
+pointent vers `HUMAN_VALIDATION` vs `AUTO_EXECUTE` sont calculées à la
+construction du graphe, pas à l'exécution. Le LLM ne décide pas de son
+propre niveau d'autonomie — Gradle le lui impose.
+
+=== La synthèse dialectique — ce que la contradiction produit
+
+Les quatre failles ne sont pas des défauts du pipeline. Elles sont des
+**spécifications implicites** — des contraintes que l'état actuel du
+système ne remplit pas encore, mais dont l'absence rend l'autonomie
+impossible.
+
+La contradiction produit trois mécanismes concrets :
+
+. *La sandbox de plan* (issue de Faille 1) : le plan est spéculé par
+  Gemma 4, écrit dans un fichier temporaire, validé par du Kotlin typé
+  qui vérifie que les tâches routées existent et que leurs préconditions
+  sont satisfaites. Le plan validé devient un commit de plan. L'exécution
+  consomme le plan validé, pas la spéculation directe.
+. *La transaction atomique avec rollback* (issue de Faille 2 + 4) :
+  l'exécution est wrappée dans une transaction Git. Si le build est rouge,
+  `git reset --hard` ramène le workspace à l'état d'avant exécution.
+  L'agent ne peut pas corrompre le workspace silencieusement.
+. *Le seuillage paramétrable* (issue de Faille 3 + 4) : chaque point de
+  décision a un niveau de risque et un score de confiance. Le paramètre
+  `-Pautonomy` détermine le seuil d'exécution automatique. Le LLM ne
+  décide pas de son autonomie — c'est un contrat Gradle.
+
+.Ce que cette synthèse apporte au document précédent :
+
+[cols="1,3,3", options="header"]
+|===
+| Aspect | Avant la contradiction (thèse) | Après la contradiction (synthèse)
+| **Exécution du plan** | Gemma 4 route → tâche Gradle exécutée immédiatement |
+| Plan spéculé → sandbox → validation Kotlin → exécution conditionnelle
+| **Sécurité** | Aucune — confiance implicite dans le LLM |
+| Transaction atomique avec rollback automatique sur échec du build
+| **Autonomie** | Binaire (supervisé / autonome) |
+| Continue, paramétrée par niveau : `-Pautonomy=semi|high|full`
+| **Décision** | Le LLM décide (prompt conversationnel) |
+| Gradle impose le niveau d'autonomie, LLM exécute dans le cadre imposé
+| **Métrique de succès** | `code_per_message` (output uniquement) |
+| `décision_actée / hypothèses_explorées` (exploration + output)
+|===
+
+=== Le principe dialectique appliqué au pipeline
+
+> L'autonomie n'est pas une propriété émergente qu'on obtient en ajoutant
+> des couches d'augmentation. C'est une propriété **négative** — elle se
+> définit par ce que l'agent *refuse de faire* sans validation.
+>
+> Un agent autonome n'est pas un agent qui décide tout seul. C'est un agent
+> qui connaît la limite de sa propre confiance, et qui s'arrête quand cette
+> limite est atteinte. La capacité à *ne pas décider* est le fondement de
+> l'autonomie pilotable.
+>
+> Les trois garde-fous — budget d'autonomie, rollback atomique, seuils de
+> confiance paramétrables — transforment le pipeline d'un système de
+> perception en un système d'action. Ils ne sont pas des contraintes qui
+> brident l'agent. Ils sont les **spécifications de son contrat de travail**.
+> L'agent est un employé synthétique. Comme tout employé, il a un périmètre
+> de responsabilité, un budget, un droit à l'erreur (le rollback), et une
+> obligation d'escalade (le seuil de confiance).
+
+=== Le paramètre `-PmaxSteps` comme premier cran de pilotage passif
+
+Dans l'immédiat, sans attendre l'implémentation complète des trois garde-fous,
+un seul paramètre suffit à rendre le pipeline pilotable passivement :
+`-PmaxSteps=N`.
+
+Il borne le graphe LangGraph4j à N nœuds d'exécution maximum. C'est trivial à
+implémenter (un compteur dans la boucle d'orchestration). C'est compréhensible
+par l'humain (« fais 5 étapes, puis arrête-toi et montre-moi l'état »). Et
+c'est la brique minimale du développement par surveillance : le Planning
+Expert décompose l'intention en plan, le graphe exécute N étapes, s'arrête,
+commit l'état, et attend la prochaine instruction.
+
+C'est le mode `-Pautonomy=semi` sans infrastructure de validation complexe.
+Juste un compteur et un `interruptBefore` dans le graphe LangGraph4j.
+
 == Synthèse — Le Cinquième Document du Jardin Secret
 
 Ce document est le **cinquième document du jardin secret**, complétant :
@@ -4969,5 +5328,5 @@ Maintenant il l'est.
 
 [.text-right]
 *Document initié le 6 mai 2026 — enrichi le 7 mai 2026.*
-*Session dialectique complète : définition du MVP0 fondamental → structuration relationnelle du corpus (JSON LDD → SQL LMD) → enrichissement croisé (RAG + Graphify) → bibliothèque systémique cross-books (5 critères) → taxonomie de Bloom → couches d'augmentation Code/Delta/Erreurs/Dépendances → outils de raisonnement (21 modes) → LLM Trainer et modèle canonique de l'expert → Gradle comme conscience du projet → comparaison Mill → séparation des concerns en 7 bounded contexts → Vrai MVP : la boucle d'autonomie pour le vibecoding.*
-*Cinquième document du jardin secret — 4716 lignes.*
+*Session dialectique complète : définition du MVP0 fondamental → structuration relationnelle du corpus (JSON LDD → SQL LMD) → enrichissement croisé (RAG + Graphify) → bibliothèque systémique cross-books (5 critères) → taxonomie de Bloom → couches d'augmentation Code/Delta/Erreurs/Dépendances → outils de raisonnement (21 modes) → LLM Trainer et modèle canonique de l'expert → Gradle comme conscience du projet → comparaison Mill → séparation des concerns en 7 bounded contexts → Vrai MVP : la boucle d'autonomie pour le vibecoding → **contradiction dialectique de l'autonomie (antithèse : failles, garde-fous, synthèse).***
+*Cinquième document du jardin secret.*
