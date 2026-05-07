@@ -1,28 +1,29 @@
 = PROMPT_REPRISE — codex-gradle
 
 '''
-== Resume de la derniere session (Session 001 — 2026-05-07)
+== Resume de la derniere session (Session 002 — 2026-05-07 — Clôture/Bouclage)
 
-*Objectif* : Affiner la vision du pipeline avec la structuration relationnelle
-du corpus livresque (JSON LDD → SQL LMD → cartographie ontologique).
+*Objectif* : Séparer les concerns du pipeline en bounded contexts physiques distincts
++ boucler la session dialectique du 6-7 mai.
 
 *Ce qui a ete fait* :
-- Ajout du chapitre "La Structuration Relationnelle du Livre" dans AUGMENTED_CONTEXT_PIPELINE.adoc
-- Définition du flux complet : PDF → AsciiDoc structuré → JSON LDD → SQL LMD → ontologie calculée
-- Spécification des 3 requêtes SQL archétypales (hiérarchie, dépendances, cooccurrence)
-- Intégration avec LangGraph4j pour le développement par surveillance
-- 4 nouvelles tâches Gradle identifiées : extractBookStructure, asciiDocToJsonLdd, importBookSql, deriveOntology
-- Référence : livre Applied AI for Enterprise Java Development (O'Reilly, 2025)
+- Ajout de la section "Séparation des Concerns" dans AUGMENTED_CONTEXT_PIPELINE.adoc
+- Cartographie physique : codex-gradle (acquisition), library-gradle (bibliothèque, nouveau),
+  codebase-gradle (couches Code, à étendre), trainer-gradle (LLM Trainer, nouveau),
+  engine (orchestration N3), codex-conventions-gradle (DSL partagé, nouveau)
+- Analyse Mill : millBakerPlugin analysé (107 lignes Scala vs 400+ Kotlin)
+- Comparaison Gradle vs Mill documentée
+- Document final à 4615 lignes
 
-*Prochaine étape* : CDX-1 — Implémenter extractBookStructure (PDFBox + PDFStreamEngine → AsciiDoc structuré)
+*Prochaine étape* : CDX-1a — Implémenter `extractBookStructure` (PDFBox + PDFStreamEngine → AsciiDoc structuré)
 
 *Fichiers critiques a charger en EAGER* :
 - `AGENT.adoc`
-- `AUGMENTED_CONTEXT_PIPELINE.adoc` (section <<codex>> + section <<json-ldd-sql-lmd>>)
-- `PLAN_ATTAQUE_DOC_PIPELINE.adoc` (dans la racine workspace)
+- `AUGMENTED_CONTEXT_PIPELINE.adoc` — le document complet
+- `PLAN_ATTAQUE_DOC_PIPELINE.adoc`
 
 *Codebases de reference LAZY* :
 - `foundry/jhipster-gradle-plugins/` (pattern parent)
-- `foundry/engine/` (consommateur N3)
+- `foundry/engine/` (hub N3)
 - `office/books-collection/` (source PDFs)
-- `office/pilotage/codex-gradle/images/Enterprise_Java_Design_Patterns_in_the_Cloud_Native_Era/` (.adoc acquis)
+- `sources/draft/millBakerPlugin/` (exemple Mill)

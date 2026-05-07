@@ -58,3 +58,29 @@ Historique des sessions de developpement du plugin codex-gradle.
 - L'ontologie est calculée par requêtage statistique : DDD par induction sur corpus structuré
 - Les 4 nouvelles tâches s'intercalent entre codexChunk et assembleCompositeContext
 - Le développement par surveillance devient exécutable via LangGraph4j (routing + pause/reprise)
+
+'''
+== Session 002 — Séparation des Concerns & Bouclage
+
+*Date* : 2026-05-07
+*Type* : design (clôture)
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : —
+
+*Objectif* :
+- Identifier les bounded contexts du pipeline et leur séparation physique
+- Boucler la session dialectique du 6-7 mai 2026
+
+*Livrables* :
+- Section "Séparation des Concerns" dans AUGMENTED_CONTEXT_PIPELINE.adoc
+- Cartographie physique finale du workspace post-migration
+- Analyse comparative Mill : millBakerPlugin (107 lignes) vs bakery-gradle (400+)
+- Gradle comme runtime agentique : conscience du projet (7 sources, 5 niveaux de génération)
+- Document final à 4615 lignes
+
+*Décisions clés* :
+- Codex ne peut pas tout contenir → 7 bounded contexts physiques émergent
+- library-gradle, trainer-gradle, codex-conventions-gradle = nouveaux dossiers
+- codebase-gradle absorbe les couches Code (annotate, delta, diagnose, deps)
+- Mill validé comme runtime alternatif, Gradle = capital fixe
+- Pattern existant répliqué : chaque dossier = plugin Gradle indépendant

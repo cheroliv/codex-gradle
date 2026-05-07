@@ -6,7 +6,7 @@ _Ontologie spatiale_ : voir `configuration/.agents/AGENT_GOVERNANCE.adoc`
 _DAG_ : N2 — Plugin Gradle d'acquisition de documents (Regle 4bis)
 
 _Derniere mise a jour_ : 2026-05-06
-_Session en cours_ : 001 — JSON LDD, SQL LMD, Cartographie Ontologique
+_Session en cours_ : 002 — Séparation des Concerns & Bouclage
 
 '''
 == REGLES ABSOLUES (resume)
@@ -25,6 +25,7 @@ _Session en cours_ : 001 — JSON LDD, SQL LMD, Cartographie Ontologique
 | # | Date | Type | Sujet | Score
 | 0 | 2026-05-06 | init | Bootstrap gouvernance agent codex + scaffold plugin | —
 | 001 | 2026-05-07 | design | JSON LDD, SQL LMD, Cartographie Ontologique | —
+| 002 | 2026-05-07 | design | Séparation des Concerns & Bouclage | —
 |===
 
 '''
@@ -36,7 +37,14 @@ _Session en cours_ : 001 — JSON LDD, SQL LMD, Cartographie Ontologique
 | CDX-1a | Task `extractBookStructure` — PDFBox PDFStreamEngine → AsciiDoc structuré | A FAIRE | P0
 | CDX-1b | Task `asciiDocToJsonLdd` — AST AsciidoctorJ → JSON LDD | A FAIRE | P0
 | CDX-1c | Task `importBookSql` — JSON LDD → DDL + INSERT PostgreSQL | A FAIRE | P0
-| CDX-1d | Task `deriveOntology` — SQL LMD → cartographie ontologique | A FAIRE | P0
+| CD-2 | Extraction de documentation des dépendances (`acquireDependencyDocs`) | A FAIRE | P1 | codebase-gradle
+| CDX-3 | Task `deriveOntology` — SQL LMD → cartographie ontologique | A FAIRE | P1 | codex-gradle
+| CDX-4 | Task `enrichJsonLdd` — croisement JSON LDD + RAG + Graphify | A FAIRE | P1 | codex-gradle
+| CDX-5 | Task `exportKnowledgeBase` — JSON-L / Markdown / AsciiDoc | A FAIRE | P1 | codex-gradle
+| LIB-0 | Création `foundry/library-gradle/` + gouvernance agent | A FAIRE | P2 | library-gradle
+| LIB-1 | Task `assembleLibrary` — agrégation cross-books (5 critères) | A FAIRE | P2 | library-gradle
+| TRN-0 | Création `foundry/trainer-gradle/` + gouvernance agent | A FAIRE | P3 | trainer-gradle
+| TRN-1 | Task `assembleTrainingDataset` | A FAIRE | P3 | trainer-gradle
 | CDX-2 | Détection typographique → hiérarchie de titres | A FAIRE | P0
 | CDX-3 | Task `convertToMarkdown` avec blocs de code | A FAIRE | P0
 | CDX-4 | Task `chunkDocument` — stratégie sémantique | A FAIRE | P0

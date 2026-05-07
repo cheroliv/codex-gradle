@@ -2020,6 +2020,2513 @@ C'est du **DDD par induction statistique sur corpus structuré**. Le LDD donne
 la topologie. Le LMD donne la densité relationnelle. Les bounded contexts ne
 sont pas devinés — ils sont *calculés*.
 
+=== Enrichissement Croisé — JSON LDD + RAG + Knowledge Graph
+
+==== Le problème résolu
+
+Le flux actuel est linéaire — chaque étape produit un artefact consommé par la
+suivante. Or, le même livre existe sous trois représentations qui ne se parlent
+pas encore :
+
+[cols="1,3,2", options="header"]
+|===
+| Représentation | Nature | Outil / Stockage
+| **JSON LDD** | Structure déclarative : le squelette du livre (chapitres,
+sections, entités, cross-references) | Parsé depuis AsciiDoc, stocké en fichier
+| **Chunks RAG** | Matière sémantique : texte découpé par section, vectorisé,
+requêtable par similarité cosinus | pgvector + embeddings ONNX AllMiniLmL6V2
+| **Knowledge Graph** | Relations exactes entre entités : dépendances,
+hiérarchies, cooccurrences | Graphify (graphe navigable, requêtage par prédicat)
+|===
+
+Les 4 tâches actuelles (`extractBookStructure`, `asciiDocToJsonLdd`,
+`importBookSql`, `deriveOntology`) produisent ces trois représentations
+indépendamment. Mais elles ne sont pas jointes. Le JSON LDD ne sait pas
+quel chunk RAG correspond à quelle section. Le chunk RAG ne sait pas
+quelles entités Graphify sont mentionnées dans son texte. Le nœud Graphify
+ne sait pas de quel livre il provient ni dans quel chapitre il apparaît.
+
+C'est un gaspillage de contexte : le vecteur composite assemble RAG + KG +
+SQL comme trois composantes séparées, mais le lien entre elles n'est pas
+explicite. Le LLM reçoit trois vues du même objet sans savoir qu'elles
+décrivent la même chose.
+
+==== La solution : enrichJsonLdd
+
+La cinquième tâche, `enrichJsonLdd`, croise les trois représentations en
+ajoutant des pointeurs bidirectionnels dans le JSON LDD. Pour chaque section
+du livre, elle :
+
+. *Joint les chunks RAG* par la clé composite `(sourceDocument, pageNumber,
+sectionPath)`. Chaque section reçoit la liste des `chunk_id` qui vectorisent
+son contenu, plus le score de similarité du chunk le plus proche de la section
+mère (le chapitre).
+. *Joint les nœuds Graphify* par `entity.name`. Chaque entité mentionnée
+dans une section reçoit l'identifiant du nœud correspondant dans le knowledge
+graph — qu'il ait été généré par le même livre ou par un autre document du
+corpus.
+. *Calcule la densité sémantique de la section* — ratio du nombre d'entités
+uniques par paragraphe. Les sections à forte densité sont des candidates
+naturelles à devenir des bounded contexts.
+
+[source]
+----
+┌─────────────────────────────────────────────┐
+│              JSON LDD ORIGINAL              │
+│                                             │
+│  section: {                                 │
+│    "title": "Interaction and Transport",    │
+│    "content": "...",                        │
+│    "entities": ["MCP", "A2A", "Drools"],   │
+│    "pageNumber": 69                         │
+│  }                                          │
+└──────────┬────────────┬─────────────────────┘
+           │            │
+           ▼            ▼
+┌─────────────────┐  ┌─────────────────────────┐
+│  Chunks RAG     │  │   Knowledge Graph       │
+│  (pgvector)     │  │   (Graphify)            │
+│                 │  │                         │
+│  chunk_id: a7f3 │  │  entity:MCP             │
+│  chunk_id: b2e1 │  │    └── protocol_of: A2A │
+│  chunk_id: c9d4 │  │  entity:Drools          │
+│                 │  │    └── implements: MCP  │
+└────────┬────────┘  └──────────┬──────────────┘
+         │                      │
+         ▼                      ▼
+┌───────────────────────────────────────────────────┐
+│               JSON LDD ENRICHI                    │
+│                                                   │
+│  section: {                                       │
+│    "title": "Interaction and Transport",          │
+│    "content": "...",                              │
+│    "entities": [                                  │
+│      { "name": "MCP",                             │
+│        "graph_node_id": "graphify:entity:mcp",    │
+│        "related_in_graph": ["A2A", "Drools"] },   │
+│      { "name": "A2A",                             │
+│        "graph_node_id": "graphify:entity:a2a" },  │
+│      { "name": "Drools",                          │
+│        "graph_node_id": "graphify:entity:drools" }│
+│    ],                                             │
+│    "rag_chunks": [                                │
+│      { "id": "a7f3", "similarity": 0.94 },        │
+│      { "id": "b2e1", "similarity": 0.87 },        │
+│      { "id": "c9d4", "similarity": 0.81 }         │
+│    ],                                             │
+│    "entity_density": 3.2,                         │
+│    "cross_book_entities": [                       │
+│      { "book": "Designing DDD",                   │
+│        "entity": "AggregateRoot",                 │
+│        "graph_node_id": "graphify:entity:aggr" }  │
+│    ]                                              │
+│  }                                                │
+└───────────────────────────────────────────────────┘
+----
+
+==== Ce que l'enrichissement croisé débloque concrètement
+
+*Pour le vecteur composite* ::
+Au lieu de trois composantes séparées (RAG, KG, SQL), le vecteur composite
+devient un graphe unifié. Le LLM reçoit une section avec ses chunks RAG
+pré-remontés, ses nœuds Graphify résolus, et ses entités cross-book identifiées.
+Il ne "découvre" pas la relation entre `MCP` et `A2A` — il la reçoit déjà
+structurellement. La densité d'information par token injecté est maximale.
+
+*Pour le Planning Expert* ::
+Quand le Planning Expert décompose une intention, il peut naviguer les trois
+couches simultanément :
+- Chunks RAG → "quelles sections couvrent le mieux ce besoin ?" (similarité)
+- JSON LDD enrichi → "dans quel livre, quel chapitre, quelle séquence ?" (topologie)
+- Graphify → "quels concepts sont prérequis de ce concept ?" (relations exactes)
+
+La décomposition n'est plus une recherche en aveugle — c'est une traversée
+de graphe dont les arêtes sont déjà calculées.
+
+*Pour le développement par surveillance* ::
+Le nœud LangGraph4j qui décide de router vers un outil Gradle peut consulter
+le JSON LDD enrichi pour savoir si la tâche demandée est documentée dans le
+corpus, par quel livre, avec quelle densité d'entités. Si le corpus contient
+une section à densité > 5.0 sur le pattern demandé, le graphe route vers une
+exécution assistée. Si la densité est < 1.0, il interrompt et demande
+confirmation humaine.
+
+*Pour le LMD cross-book* ::
+Une fois plusieurs livres importés et enrichis, le LMD peut répondre à des
+requêtes qui combinent les trois représentations :
+
+[source,sql]
+----
+-- Sections à forte densité d'entités traitant du même concept
+-- dans deux livres différents — divergence de définition ?
+SELECT b1.title AS book_1, s1.title AS section_1,
+       b2.title AS book_2, s2.title AS section_2,
+       e.name AS shared_entity,
+       s1.entity_density AS density_1,
+       s2.entity_density AS density_2
+FROM section s1
+JOIN book b1 ON s1.book_id = b1.id
+JOIN section_entity se1 ON s1.id = se1.section_id
+JOIN entity e ON se1.entity_name = e.name
+JOIN section_entity se2 ON e.name = se2.entity_name
+JOIN section s2 ON se2.section_id = s2.id AND s2.book_id != s1.book_id
+JOIN book b2 ON s2.book_id = b2.id
+WHERE s1.entity_density > 3.0 AND s2.entity_density > 3.0
+ORDER BY e.name, s1.entity_density DESC;
+----
+
+→ Sortie : les sections où deux auteurs traitent le même concept avec une
+densité comparable — le matériau brut pour l'alignement ontologique
+cross-source.
+
+==== La tâche Gradle `enrichJsonLdd`
+
+[source,kotlin]
+----
+abstract class EnrichJsonLdd : DefaultTask() {
+
+    @get:InputFile
+    abstract val jsonLdd: RegularFileProperty
+
+    @get:Input
+    abstract val pgvectorUrl: Property<String>
+
+    @get:Input
+    abstract val graphifyGraph: RegularFileProperty
+
+    @get:OutputFile
+    abstract val enrichedJson: RegularFileProperty
+
+    @TaskAction
+    fun enrich() {
+        val book = Json.decodeFromString<Book>(jsonLdd.asFile.get().readText())
+
+        val enrichedBook = book.copy(
+            parts = book.parts.map { part ->
+                part.copy(
+                    chapters = part.chapters.map { chapter ->
+                        chapter.copy(
+                            sections = chapter.sections.map { section ->
+                                // 1. Joint RAG chunks
+                                val ragChunks = pgvector.query(
+                                    filter = "source_document = '${book.isbn}' "
+                                        + "AND page_number = ${section.pageNumber} "
+                                        + "AND section_path @> '${section.title}'",
+                                    topK = 10
+                                ).map { RagRef(it.id, it.similarity) }
+
+                                // 2. Joint nœuds Graphify
+                                val enrichedEntities = section.entities.map { entity ->
+                                    val graphNode = graphify.lookup(entity.name)
+                                    entity.copy(
+                                        graphNodeId = graphNode?.id,
+                                        relatedInGraph = graphNode?.neighbors(2)
+                                            ?.map { it.name } ?: emptyList()
+                                    )
+                                } + graphify.searchCrossBook(section.entities.map { it.name })
+
+                                // 3. Calcule la densité sémantique
+                                val entityDensity = section.entities.size.toFloat()
+                                    / maxOf(section.content.split("\n\n").size, 1)
+
+                                section.copy(
+                                    enrichedEntities = enrichedEntities,
+                                    ragChunks = ragChunks,
+                                    entityDensity = entityDensity
+                                )
+                            }
+                        )
+                    }
+                )
+            }
+        )
+
+        enrichedJson.asFile.get().writeText(Json.encodeToString(enrichedBook))
+        logger.lifecycle("[CTX] enrichJsonLdd: ${book.entitiesTotal} entités → "
+            + "${enrichedBook.graphNodesResolved} nœuds Graphify résolus, "
+            + "${enrichedBook.ragChunksTotal} chunks RAG joints")
+    }
+}
+----
+
+==== Positionnement dans le pipeline
+
+[source]
+----
+extractBookStructure     ← PDFBox → AsciiDoc structuré (.adoc)
+    │
+    ▼
+asciiDocToJsonLdd        ← AsciidoctorJ AST walk → JSON LDD
+    │
+    ▼
+codexChunk               ← JSON LDD → chunks sémantiques → pgvector (embeddings)
+    │
+    ▼
+enrichJsonLdd            ← croise JSON LDD + pgvector + Graphify → JSON LDD enrichi
+    │
+    ▼
+importBookSql            ← JSON LDD enrichi → DDL + INSERT PostgreSQL (LMD)
+    │
+    ▼
+deriveOntology           ← LMD enrichi → cartographie ontologique (cooccurrence
+                          + densité + relations Graphify)
+----
+
+`enrichJsonLdd` s'intercale entre `codexChunk` et `importBookSql`. Elle
+suppose que les chunks RAG sont déjà dans pgvector (après `codexChunk` +
+`codexIngest`) et que le knowledge graph Graphify est déjà construit. Si
+l'un des deux n'est pas disponible, la tâche enrichit partiellement (RAG
+sans KG, ou KG sans RAG) et logue un avertissement en stdout.
+
+==== Extension de la roadmap
+
+[cols="1,2", options="header"]
+|===
+| Avant l'enrichissement croisé | Après
+| 3 représentations indépendantes du même livre | 1 JSON LDD enrichi qui joint
+RAG + KG + structure relationnelle
+| Vecteur composite = 3 composantes séparées | Vecteur composite = 1 graphe
+unifié (chaque composante référence les deux autres)
+| Planning Expert requête chaque source séparément | Planning Expert navigue
+un graphe unique dont les arêtes sont pré-calculées
+| Cross-book : impossible sans jointure manuelle | Cross-book : Graphify relie
+les entités entre livres, le JSON LDD enrichi les référence
+|===
+
+==== Le principe d'enrichissement
+
+> Le JSON LDD n'est pas un artefact terminal — c'est un hub d'indexation.
+> Chaque section pointe vers ses chunks RAG (similarité) et ses nœuds Graphify
+> (relations exactes). Le vecteur composite n'assemble plus trois vues
+> disjointes du même objet — il navigue un graphe unique où chaque composante
+> connaît les deux autres.
+>
+> L'enrichissement croisé transforme le corpus de "trois silos requêtables
+> séparément" en "une carte conceptuelle navigable comme un seul système".
+
+=== La Bibliothèque — Le Sur-Ensemble Systémique Cross-Books
+
+==== Le concept
+
+L'enrichissement croisé traite un livre à la fois : il croise son JSON LDD
+avec ses propres chunks RAG et les nœuds Graphify globaux. Mais le vrai
+levier, c'est le **cross-book** — la capacité à faire système entre
+plusieurs livres pour identifier des relations qui n'existent *dans aucun
+livre pris isolément*, mais qui émergent de leur mise en relation.
+
+Une bibliothèque est un **sur-ensemble systémique** qui englobe N livres.
+Au sein de ce système, quatre critères de recoupement permettent
+d'identifier des relations invisibles au niveau du livre individuel :
+
+[cols="1,3,2", options="header"]
+|===
+| Critère | Ce qu'il détecte | Source
+| **Chunks RAG** | Similarité sémantique cross-books : deux sections de deux
+livres différents traitent du même sujet sans mentionner le même terme |
+pgvector (cross-book query, même embedding space)
+| **Nœuds de connaissance** | Identité conceptuelle : `AggregateRoot` dans le
+livre A est le même concept que `Aggregate` dans le livre B | Graphify
+(résolution d'entités par voisinage de graphe)
+| **Ontologie** | Alignement de bounded contexts : le bounded context
+`Orchestration` dérivé du livre A recouvre partiellement le bounded context
+`Workflow` dérivé du livre B | SQL LMD (jointure sur entités partagées +
+comparaison de densité)
+| **Texte / Motifs** | Patterns textuels identiques : deux livres utilisent
+la même structure d'explication pour introduire un concept (définition →
+exemple → contre-exemple) | Recherche plein texte + regex structurels sur
+le contenu des sections
+|===
+
+==== Architecture de la Bibliothèque
+
+La bibliothèque est elle-même un JSON LDD — le **LDD de la bibliothèque** —
+qui référence les JSON LDD enrichis de chaque livre et calcule des relations
+cross-books sur les quatre critères :
+
+[source,json]
+----
+{
+  "library": {
+    "name": "office-books-collection",
+    "books": [
+      {
+        "isbn": "978-1-098-17675-4",
+        "title": "Applied AI for Enterprise Java Development",
+        "jsonLddPath": "office/data-engineering/doc-pipeline/json-ldd/applied-ai.json"
+      },
+      {
+        "isbn": "978-0-321-83457-7",
+        "title": "Implementing Domain-Driven Design",
+        "jsonLddPath": "office/data-engineering/doc-pipeline/json-ldd/ddd.json"
+      }
+    ],
+    "cross_book_relations": [
+      {
+        "criteria": ["chunk", "knowledge_node"],
+        "from": { "book": "Applied AI", "section": "Bounded Contexts via SQL" },
+        "to": { "book": "Implementing DDD", "section": "Bounded Context" },
+        "relation_type": "concept_equivalence",
+        "confidence": 0.92,
+        "evidence": {
+          "rag_similarity": 0.89,
+          "shared_entities": ["Bounded Context", "Aggregate", "Entity"],
+          "graph_path": "graphify:entity:bounded_context → related_to → graphify:entity:ddd_bc",
+          "text_pattern": "both_define_with_example"
+        }
+      }
+    ],
+    "emergent_concepts": [
+      {
+        "name": "Agentic Orchestration Pattern",
+        "synthesized_from": [
+          { "book": "Applied AI", "concept": "Routing Agents + Human Interaction" },
+          { "book": "Designing DDD", "concept": "Domain Event + Saga" }
+        ],
+        "criteria_met": ["knowledge_node", "ontology"],
+        "description": "Les deux livres décrivent un pattern de délégation avec
+          point de décision et reprise — l'un dans le contexte LLM, l'autre dans
+          le contexte métier. Le pattern est isomorphe."
+      }
+    ]
+  }
+}
+----
+
+==== Les quatre critères — implémentation
+
+===== Critère 1 : Chunks RAG cross-books
+
+Tous les chunks de tous les livres sont vectorisés dans le même espace
+d'embedding (ONNX AllMiniLmL6V2). Une requête cross-book compare les
+chunks d'un livre A avec ceux d'un livre B par similarité cosinus :
+
+[source,sql]
+----
+SELECT a.section_id AS section_a, b.section_id AS section_b,
+       a.book_title AS book_a, b.book_title AS book_b,
+       1 - (a.embedding <=> b.embedding) AS similarity
+FROM chunk_embedding a
+CROSS JOIN chunk_embedding b
+WHERE a.book_isbn != b.book_isbn
+  AND 1 - (a.embedding <=> b.embedding) > 0.85
+ORDER BY similarity DESC;
+----
+
+Ce qui émerge : deux sections qui ne mentionnent pas les mêmes termes mais
+que le modèle juge sémantiquement proches. C'est le "flou productif" du RAG
+appliqué au cross-book — il trouve des parentés qu'aucun index plein texte
+ne verrait.
+
+===== Critère 2 : Nœuds de connaissance Graphify
+
+Graphify contient des nœuds pour toutes les entités de tous les livres.
+La résolution d'identité conceptuelle fonctionne par **voisinage de
+graphe** : si deux entités de deux livres différents partagent les mêmes
+voisins dans le graphe (mêmes relations, mêmes entités connectées), elles
+sont probablement le même concept.
+
+[source,kotlin]
+----
+fun resolveEntityIdentity(entityA: GraphNode, entityB: GraphNode): Float {
+    val neighborsA = entityA.neighbors(2).map { it.name }.toSet()
+    val neighborsB = entityB.neighbors(2).map { it.name }.toSet()
+    val intersection = neighborsA.intersect(neighborsB).size
+    val union = neighborsA.union(neighborsB).size
+    return intersection.toFloat() / union.toFloat()  // Jaccard sur voisinage
+}
+----
+
+Seuil de résolution : Jaccard > 0.6 → les deux entités sont déclarées
+équivalentes. La bibliothèque enregistre la relation avec le `graph_path`
+(chemin dans le graphe qui a permis la résolution).
+
+===== Critère 3 : Ontologie — alignement des bounded contexts
+
+Chaque livre produit ses propres bounded contexts candidats via
+`deriveOntology`. La bibliothèque les aligne par **jointure sur entités
+partagées** :
+
+[source,kotlin]
+----
+data class BoundedContextAlignment(
+    val bcBookA: BoundedContext,
+    val bcBookB: BoundedContext,
+    val sharedEntities: List<String>,
+    val overlapRatio: Float,         // |A ∩ B| / min(|A|, |B|)
+    val densityCorrelation: Float     // corrélation des densités
+)
+
+fun alignBoundedContexts(bookA: List<BoundedContext>,
+                         bookB: List<BoundedContext>): List<BoundedContextAlignment> {
+    return bookA.flatMap { bcA ->
+        bookB.mapNotNull { bcB ->
+            val shared = bcA.entities.intersect(bcB.entities.toSet())
+            if (shared.size < 2) return@mapNotNull null // minimum 2 entités partagées
+            val overlap = shared.size.toFloat() / minOf(bcA.entities.size, bcB.entities.size)
+            if (overlap < 0.4) return@mapNotNull null    // seuil de recouvrement
+            BoundedContextAlignment(bcA, bcB, shared.toList(), overlap,
+                pearsonCorrelation(bcA.entityDensities, bcB.entityDensities))
+        }
+    }.sortedByDescending { it.overlapRatio }
+}
+----
+
+L'alignement ne dit pas "ces deux bounded contexts sont identiques" — il
+dit "ces deux bounded contexts partagent N entités, avec un ratio de
+recouvrement R, et une corrélation de densité D". C'est à l'humain (ou au
+Planning Expert) de trancher si l'alignement est pertinent.
+
+===== Critère 4 : Texte / Motifs — patterns structurels
+
+Au-delà du contenu sémantique, les livres techniques suivent des **patterns
+d'exposition** récurrents : définition formelle → exemple → contre-exemple,
+ou problème → patterns connus → solution émergente, ou concept A introduit
+au chapitre N → réutilisé au chapitre N+3.
+
+Ces motifs sont détectables par des **requêtes structurelles** sur le JSON
+LDD enrichi :
+
+[source,kotlin]
+----
+enum class ExpositionPattern {
+    DEFINE_THEN_EXEMPLIFY,     // "X is..." suivi d'un bloc de code
+    PROBLEM_PATTERNS_SOLUTION, // "The problem..." → patterns → solution
+    INTRODUCE_THEN_REUSE,      // concept introduit chap N, réutilisé chap N+K
+    COMPARE_CONTRAST,          // "Unlike X, Y..." — comparaison explicite
+    HISTORICAL_MOTIVATION      // "Before X, developers used Y..."
+}
+
+fun detectExpositionPatterns(sections: List<EnrichedSection>): Map<ExpositionPattern, Int> {
+    return mapOf(
+        DEFINE_THEN_EXEMPLIFY to sections.count {
+            it.content.contains(" is ", ignoreCase = true)
+                && it.codeBlocks.isNotEmpty()
+                && it.codeBlocks.first().charOffset < it.content.indexOf(" is ") + 200
+        },
+        INTRODUCE_THEN_REUSE to countCrossReferences(sections) { ref ->
+            ref.from.chapterNumber < ref.to.chapterNumber
+                && ref.type == "pattern_reuse"
+        }
+    )
+}
+----
+
+Deux livres qui utilisent le même pattern d'exposition pour le même concept
+sont probablement dans une relation de filiation intellectuelle (l'un a
+inspiré l'autre, ou les deux puisent à la même source). La bibliothèque
+enregistre cette relation comme `text_pattern: both_define_with_example`.
+
+==== Les relations qui émergent
+
+Sur les quatre critères, la bibliothèque calcule un **score composite de
+relation cross-book** :
+
+[source,kotlin]
+----
+data class CrossBookRelation(
+    val from: SectionRef,
+    val to: SectionRef,
+    val criteriaScores: Map<Criteria, Float>,  // chunk: 0.89, node: 0.92, ontology: 0.0, text: 0.75
+    val compositeScore: Float,                  // moyenne pondérée des scores présents
+    val confidence: Float,                       // ratio critères activés / 4
+    val relationType: RelationType               // equivalence, complement, contradiction, inspiration
+)
+
+enum class Criteria { CHUNK, KNOWLEDGE_NODE, ONTOLOGY, TEXT_PATTERN }
+
+enum class RelationType {
+    CONCEPT_EQUIVALENCE,    // même concept, mots différents → à fusionner
+    COMPLEMENT,             // concept A dans livre 1, concept B dans livre 2, A → B
+    CONTRADICTION,          // définitions incompatibles → à trancher
+    INSPIRATION,            // même pattern d'exposition, même structure → filiation
+    NOVELTY_ISOLATED         // concept présent dans un seul livre → lacune cross-corpus
+}
+----
+
+Le `compositeScore` pondère également les quatre critères : le chunk RAG
+(0.3) est le plus "flou" mais le plus sensible, le nœud Graphify (0.3) est
+le plus précis, l'ontologie (0.2) capture la structure métier, le motif
+textuel (0.2) capture la forme d'exposition.
+
+==== La tâche Gradle `assembleLibrary`
+
+`assembleLibrary` est la tâche qui construit le JSON LDD de la bibliothèque
+à partir de tous les JSON LDD enrichis du corpus. Elle est incrémentale :
+si un seul livre est modifié, seules les relations qui l'impliquent sont
+recalculées.
+
+[source]
+----
+assembleLibrary (entrée : tous les JSON LDD enrichis de office/data-engineering/doc-pipeline/json-ldd/)
+    │
+    ├── 1. Charger tous les livres enrichis
+    │
+    ├── 2. Pour chaque paire de livres (A, B) :
+    │   ├── Critère CHUNK : pgvector cross-book query (seuil 0.85)
+    │   ├── Critère KNOWLEDGE_NODE : Graphify entity resolution (Jaccard > 0.6)
+    │   ├── Critère ONTOLOGY : alignement bounded contexts (overlap > 0.4)
+    │   ├── Critère TEXT_PATTERN : détection motifs d'exposition identiques
+    │   └── Score composite → CrossBookRelation
+    │
+    ├── 3. Détection des concepts émergents :
+    │   ├── Entité présente dans ≥ 3 livres → concept canonique
+    │   ├── Relation isomorphe dans ≥ 2 paires de livres → pattern transverse
+    │   └── Entité isolée dans un seul livre → candidat à l'acquisition
+    │
+    ├── 4. Génération du JSON LDD bibliothèque enrichi
+    │
+    └── 5. stdout structuré :
+        [CTX] books=12 cross_relations=347 emergent_concepts=23 isolated=8
+        [RESULT] {"library_json": "office/data-engineering/doc-pipeline/library.json"}
+----
+
+==== Ce que la bibliothèque systémique permet
+
+*Pour le Planning Expert* ::
+Quand le Planning Expert reçoit une intention, il ne cherche pas "dans quel
+livre ce concept est-il documenté ?" — il interroge la bibliothèque
+directement. La bibliothèque lui répond avec les sections pertinentes de
+*plusieurs* livres, déjà reliées entre elles par les quatre critères. Le
+plan généré n'est pas ancré sur un seul ouvrage — il est synthétisé depuis
+le corpus entier.
+
+*Pour la curation du corpus* ::
+Les entités isolées (présentes dans un seul livre) sont des candidates à
+l'acquisition : "ce concept n'est couvert que par un seul livre, faut-il
+acquérir d'autres sources ?" Inversement, les concepts canoniques
+(présents dans ≥ 3 livres) sont des candidats à l'export comme documentation
+de référence.
+
+*Pour la résolution de contradictions* ::
+Quand deux livres définissent le même concept de manière incompatible
+(relation `CONTRADICTION`), la bibliothèque le signale. Le Planning Expert
+peut alors router vers un nœud LangGraph4j d'interruption humaine :
+"L'auteur A définit X comme Y, l'auteur B définit X comme Z. Laquelle
+adopter ?"
+
+*Pour le vecteur composite* ::
+La bibliothèque devient la quatrième composante du vecteur composite, aux
+côtés de RAG, KG et SQL. Elle fournit la **vue cross-book** — la capacité
+à situer un concept dans le paysage documentaire complet, pas seulement
+dans le livre qui le mentionne.
+
+==== Le principe de la bibliothèque
+
+> La bibliothèque n'est pas une collection de livres. C'est un système dont
+> les livres sont les composants. Les relations entre livres ne sont pas
+> des métadonnées ajoutées après coup — elles sont calculées sur quatre
+> critères indépendants (similarité sémantique, identité conceptuelle,
+> alignement ontologique, patterns textuels). Ce qui émerge de ce calcul,
+> c'est une carte du savoir que le corpus *contient déjà* mais qu'aucun
+> livre pris isolément ne peut exprimer.
+
+==== Implémentation concrète
+
+`assembleLibrary` consomme directement les artefacts existants :
+
+- *pgvector* est déjà en place (embeddings ONNX, requêtage vectoriel)
+- *Graphify* est déjà en place (109 tests, 380/380 PASS, graphe navigable)
+- *SQL LMD* est déjà en place (PostgreSQL 16.3, `importBookSql` génère le DDL)
+- *JSON LDD enrichis* sont produits par `enrichJsonLdd`
+
+Aucune nouvelle infrastructure. Aucune nouvelle dépendance. La bibliothèque
+est une **tâche Gradle de jointure** qui lit les artefacts existants et
+calcule les relations. Le JSON produit est lui-même importable en SQL pour
+le LMD cross-book.
+
+Le seul prérequis : avoir au moins deux livres importés et enrichis dans
+le pipeline. Le livre Applied AI est le premier. Le deuxième pourrait être
+Implementing Domain-Driven Design (Vernon) ou un autre PDF technique déjà
+présent dans `office/books-collection/`.
+
+=== La Taxonomie de Bloom — Le Niveau d'Appréhension par Concept
+
+==== La cohérence découverte
+
+Les livres techniques ne sont pas des catalogues de concepts — ce sont des
+**trajectoires d'apprentissage**. Chaque concept y apparaît à un certain
+niveau d'appréhension : défini (Remember), illustré (Understand), mis en œuvre
+(Apply), comparé (Analyze), critiqué (Evaluate), recombiné (Create).
+
+Cette progression est la taxonomie de Bloom, implicite dans la structure du
+livre, jamais nommée. Le pipeline peut la **rendre explicite** en étiquetant
+chaque section avec son niveau Bloom, et en cartographiant la progression des
+concepts à travers les chapitres et les livres.
+
+La connexion avec l'architecture existante est naturelle : les quatre critères
+de la bibliothèque gagnent une cinquième dimension — le niveau d'appréhension
+Bloom — qui qualifie non pas *quoi* mais *à quelle profondeur* un concept est
+traité.
+
+==== Les six niveaux — mapping automatique
+
+[cols="1,2,3,4", options="header"]
+|===
+| Niveau Bloom | Verbes marqueurs | Signature | Exemple Applied AI
+| **Remember**
+_Niveau 1_ | define, list, recall, name, identify | Définition sans explication
+| « LangChain4j is a Java implementation inspired by LangChain » (chap 8)
+| **Understand**
+_Niveau 2_ | explain, describe, summarize, interpret | Paragraphe explicatif
+suivant la définition | « It helps developers build applications that
+integrate with LLMs » (chap 8, l.6913)
+| **Apply**
+_Niveau 3_ | implement, demonstrate, execute, use | Bloc de code dans la
+section | « Add the following dependency: langchain4j-open-ai... » (chap 8,
+l.6943)
+| **Analyze**
+_Niveau 4_ | compare, contrast, categorize, examine | Comparaison explicite
+ou tableau comparatif | « In contrast, using Jlama with LangChain4j... »
+(chap 7, l.5202)
+| **Evaluate**
+_Niveau 5_ | assess, critique, justify, recommend | Verdict qualitatif,
+discussion de limites | « We recommend using LangChain4j to future-proof
+your Java AI solutions » (chap 12, l.14345)
+| **Create**
+_Niveau 6_ | design, build, compose, generate | Assemblage de patterns en
+solution nouvelle | « Advanced RAG schema with self-reflection » (chap 10,
+l.12770) — RAG + KG + agent loop unifiés
+|===
+
+===== Algorithme de classification Bloom
+
+[source,kotlin]
+----
+enum class BloomLevel(val verbs: List<String>, val order: Int) {
+    REMEMBER(listOf("define", "is a", "refers to", "named"), 1),
+    UNDERSTAND(listOf("explain", "this means", "in other words",
+                       "for example"), 2),
+    APPLY(listOf("implement", "add the", "run", "configure"), 3),
+    ANALYZE(listOf("compare", "unlike", "trade-off", "differs"), 4),
+    EVALUATE(listOf("recommend", "best practice", "avoid",
+                     "limitation", "works well", "fails when"), 5),
+    CREATE(listOf("putting it all together", "final architecture",
+                   "end-to-end", "combining", "design a"), 6);
+
+    fun match(text: String): Float {
+        val hits = verbs.count { text.lowercase().contains(it) }
+        return hits.toFloat() / verbs.size
+    }
+}
+
+fun classifySectionBloom(section: EnrichedSection): Map<BloomLevel, Float> {
+    return BloomLevel.entries.associateWith { it.match(section.content) }
+}
+----
+
+Le score n'est pas binaire — une section peut avoir `APPLY=0.7` et
+`UNDERSTAND=0.4`. La classification retient le niveau dominant, les scores
+partiels sont conservés pour les requêtes croisées.
+
+===== Progression Bloom de `LangChain4j` dans Applied AI
+
+| Chapitre | Section | Niveau Bloom |
+| Chap 8 | « What Is LangChain4j? » | REMEMBER — définition |
+| Chap 8 | « Structured Prompts » | UNDERSTAND — explication avec exemple |
+| Chap 8 | « Spring Boot + LangChain4j » | APPLY — implémentation |
+| Chap 9 | « LangChain4j RAG » | ANALYZE — comparaison de stratégies |
+| Chap 12 | « Future-proofing » | EVALUATE — recommandation |
+| Chap 10 | « Advanced RAG Self-Reflection » | CREATE — solution composée |
+
+La trajectoire Bloom de `LangChain4j` est une courbe parfaite :
+REMEMBER → UNDERSTAND → APPLY → ANALYZE → EVALUATE → CREATE sur 5 chapitres.
+C'est l'ADN pédagogique du livre, rendu lisible.
+
+==== Intégration avec les structures existantes
+
+===== Dans le JSON LDD enrichi — champ `bloom`
+
+[source,json]
+----
+"section": {
+  "title": "Understanding Graphs in LangGraph4j",
+  "bloom": {
+    "dominant": "UNDERSTAND",
+    "scores": { "REMEMBER": 0.33, "UNDERSTAND": 0.80,
+                "APPLY": 0.25, "ANALYZE": 0.0,
+                "EVALUATE": 0.0, "CREATE": 0.0 },
+    "progression": {
+      "entity": "LangGraph4j",
+      "path": "REMEMBER(chap8) → UNDERSTAND(chap10) → APPLY(chap10)",
+      "completeness": 0.5
+    }
+  }
+}
+----
+
+===== Dans Graphify — propriété `bloom_levels`
+
+[source,json]
+----
+{
+  "node": "graphify:entity:langgraph4j",
+  "properties": {
+    "bloom_levels": {
+      "max_reached": "CREATE",
+      "books": {
+        "applied-ai-java": "CREATE(chap10)",
+        "spring-ai-in-action": "APPLY(chap7)"
+      }
+    }
+  }
+}
+----
+
+===== Cinquième critère de la Bibliothèque — Bloom Cross-Book
+
+Compare les progressions d'une même entité dans deux livres :
+
+[source,kotlin]
+----
+enum class BloomCrossRelation {
+    EXTENDS,      // livre B pousse le concept plus loin que A
+    COMPLEMENTS,  // A couvre remember→apply, B couvre analyze→create
+    DIVERGES,     // A évalue positivement, B évalue négativement
+    FILLS_GAP     // B couvre un niveau que A saute (ex: A saute APPLY)
+}
+
+data class BloomCrossBookRelation(
+    val entity: String,
+    val progressionBookA: BloomProgression,
+    val progressionBookB: BloomProgression,
+    val relation: BloomCrossRelation
+)
+----
+
+===== Dans le Vecteur Composite — filtre `-Pbloom`
+
+[source,bash]
+----
+# Analyse architecturale — contexte niveau EVALUATE minimum
+./gradlew analyzeCode -Ptarget=auth-module -Pbloom=evaluate
+
+# Introduction pédagogique — contexte niveau UNDERSTAND maximum
+./gradlew explainConcept -Pconcept="LangGraph4j" -Pbloom=understand
+----
+
+Le paramètre `-Pbloom` filtre le vecteur composite : un étudiant reçoit du
+UNDERSTAND, un architecte reçoit du CREATE.
+
+==== Ce que Bloom apporte
+
+*Curation du corpus* ::
+« `CircuitBreaker` : 4 livres le définissent, 0 le font implémenter —
+acquérir un tutoriel pratique. »
+
+*Planning Expert* ::
+Chaque US a un niveau Bloom. US-1 = REMEMBER (lister),
+US-4 = EVALUATE (auditer). Le plan est une **trajectoire Bloom paramétrée**.
+
+*Développement par surveillance* ::
+Le nœud LangGraph4j vérifie que le corpus supporte le niveau Bloom demandé.
+Si l'US-4 demande EVALUATE mais que le corpus ne couvre que APPLY, le graphe
+interrompt et suggère une acquisition.
+
+*Pont corpus technique ↔ corpus pédagogique* ::
+À terme, la bibliothèque annotée Bloom alimente `training-gradle` et
+`formation.json` pour générer des séquences pédagogiques depuis le corpus
+technique.
+
+==== Le principe de Bloom dans le pipeline
+
+> Chaque concept du corpus a un niveau d'appréhension — la profondeur à
+> laquelle le livre le traite. Ce niveau est détectable par les verbes, la
+> structure, et la présence de code. La progression Bloom devient une
+> propriété navigable du graphe de connaissance, requêtable en SQL,
+> filtrable dans le vecteur composite.
+>
+> Bloom n'est pas une couche externe — c'est une propriété émergente du
+> corpus que le pipeline rend explicite. Le livre Applied AI *est déjà*
+> une progression Bloom. Le pipeline la nomme.
+
+==== Implémentation — `classifyBloom`
+
+[source]
+----
+classifyBloom (entrée : JSON LDD enrichi d'un livre)
+    │
+    ├── 1. Pour chaque section : tokeniser → scores Bloom → dominant
+    │
+    ├── 2. Par entité : suivre les mentions → progressions
+    │
+    ├── 3. Graphify : injecter bloom_levels comme propriété de nœud
+    │
+    └── 4. stdout :
+        [CTX] sections=312 bloom_classified=312 progressions=47
+        [RESULT] {"gaps": ["CircuitBreaker:no_apply", "Saga:no_create"]}
+----
+
+==== Extension de la roadmap
+
+[cols="1,2", options="header"]
+|===
+| Avant Bloom | Après Bloom
+| Concepts = liste plate d'entités | Concepts = trajectoires Bloom détectées
+| 4 critères bibliothèque | 5 critères (+ bloom_crossbook)
+| Vecteur composite = RAG + KG + SQL + Bibliothèque | + Bloom filtrable
+| Planning Expert = liste de tâches | Planning Expert = trajectoire Bloom
+paramétrée
+| Pas de pont technique ↔ pédagogique | Bloom = pont entre corpus technique
+et corpus pédagogique
+|===
+
+=== Les Couches d'Augmentation Manquantes — Code, Delta, Erreur, Dépendances
+
+Le pipeline extrait et croise la connaissance livresque. Mais l'agent
+LangChain4j opère dans un environnement vivant — du code qui évolue, des builds
+qui échouent, des dépendances dont la documentation n'a jamais été acquise.
+Quatre couches d'augmentation manquent pour rendre l'agent pleinement conscient
+de son environnement d'exécution.
+
+==== Couche 1 — Code-to-Corpus Traceability
+
+===== Le problème
+
+Aujourd'hui, le pipeline relie les livres entre eux (bibliothèque, Bloom
+cross-book). Mais le code source n'est pas relié au corpus. `AuthService.kt`
+implémente un `CircuitBreaker` — l'agent ne sait *pas* que ce pattern est
+documenté, où, et à quel niveau Bloom.
+
+===== La solution
+
+Une annotation `@ConceptSource` et/ou un fingerprint de code qui associe
+chaque fichier source aux sections du corpus qui documentent ce qu'il
+implémente :
+
+[source,kotlin]
+----
+@ConceptSource(
+    books = [
+        BookRef(isbn = "978-1-098-17675-4", chapter = 12,
+                section = "Guardrails and Circuit Breaking", bloom = EVALUATE),
+        BookRef(isbn = "978-1-492-07698-8", chapter = 5,
+                section = "Resilience Patterns", bloom = APPLY)
+    ],
+    patterns = ["CircuitBreaker", "Retry", "Fallback"],
+    confidence = 0.88  // score du matching automatique
+)
+@Service
+class PaymentService(
+    @CircuitBreaker(name = "paymentGateway") val gateway: PaymentGateway
+)
+----
+
+*Matching automatique* : pour chaque fichier Kotlin/Java, le pipeline détecte
+les imports, annotations, et noms de classe → recherche dans les entités du
+corpus → calcule un score de confiance → associe les sections pertinentes.
+
+===== Ce que ça débloque
+
+- L'agent reçoit le fichier avec son **ancrage documentaire** pré-calculé
+- « Ce `CircuitBreaker` est documenté dans Applied AI (EVALUATE) + Resilience4j docs (APPLY) »
+- Le Planning Expert peut auditer : « 12 patterns identifiés dans le code,
+  8 sont documentés dans le corpus, 4 sont orphelins → acquérir de la doc »
+
+==== Couche 2 — Change Delta Awareness
+
+===== Le problème
+
+L'agent reçoit le contexte du workspace, mais pas ce qui a *changé* depuis
+la dernière exécution. Il traite l'état comme statique alors que le code
+évolue entre deux invocations.
+
+===== La solution
+
+Une composante `delta` du vecteur composite construite depuis `git diff` :
+
+[source,kotlin]
+----
+data class WorkspaceDelta(
+    val sinceCommit: String,
+    val filesAdded: List<String>,       // nouveaux fichiers
+    val filesModified: List<String>,    // fichiers modifiés
+    val filesDeleted: List<String>,     // fichiers supprimés
+    val modulesTouched: Set<String>,    // modules impactés (auth, payment...)
+    val diffSummary: String,            // git diff --stat résumé
+    val relatedSections: List<SectionRef>  // sections du corpus liées aux fichiers modifiés
+)
+
+fun computeDelta(workspace: File, since: String = "HEAD~1"): WorkspaceDelta {
+    val diff = Git(workspace).diff().setOldVersion(since).call()
+    val filesAdded = diff.addedFiles
+    val filesModified = diff.modifiedFiles
+    val modulesTouched = (filesModified + filesAdded)
+        .mapNotNull { it.moduleName() }
+        .toSet()
+
+    return WorkspaceDelta(
+        sinceCommit = since,
+        filesAdded = filesAdded,
+        filesModified = filesModified,
+        filesDeleted = diff.deletedFiles,
+        modulesTouched = modulesTouched,
+        diffSummary = Git(workspace).diff().setStat().call(),
+        relatedSections = resolveSectionsForFiles(filesModified)
+    )
+}
+----
+
+===== Ce que ça débloque
+
+- « Depuis le dernier build : 3 fichiers modifiés, 1 nouveau, module auth
+  refactoré, module payment intact »
+- Le Planning Expert priorise ses EPICs sur les modules touchés
+- Le développement par surveillance détecte une modification dans une zone
+  critique → interruption humaine obligatoire
+- `git log --since=yesterday` → historique des décisions intégré au contexte
+
+==== Couche 3 — Error → Anti-Pattern Mapping
+
+===== Le problème
+
+Les stacktraces et échecs de build ne sont pas mis en relation avec le
+corpus. L'agent signale l'erreur mais ne la *diagnostique* pas.
+
+===== La solution
+
+Une composante `failure_context` qui joint les erreurs avec les sections
+du corpus documentant le pattern fautif :
+
+[source,kotlin]
+----
+data class FailureDiagnosis(
+    val error: Throwable,
+    val location: SourceLocation,       // fichier:ligne
+    val matchedAntiPatterns: List<AntiPatternMatch>,
+    val suggestedCorrections: List<SectionRef>,
+    val bloomGap: BloomLevel?           // le code est à APPLY ou CREATE mais
+                                        // l'erreur vient d'un concept mal COMPRIS
+)
+
+data class AntiPatternMatch(
+    val section: SectionRef,
+    val patternName: String,
+    val confidence: Float,
+    val excerpt: String                 // extrait du corpus qui décrit l'anti-pattern
+)
+
+fun diagnoseFailure(stacktrace: String, corpus: Library): FailureDiagnosis {
+    val error = parseStacktrace(stacktrace)
+    val location = error.topFrame
+
+    // Matching par type d'exception + contexte de code
+    val matches = corpus.sections
+        .filter { section ->
+            section.bloom?.dominant in listOf(EVALUATE, CREATE)
+                && section.antiPatterns.any { it.matches(error) }
+        }
+        .map { section ->
+            AntiPatternMatch(
+                section = section.ref,
+                patternName = section.antiPatterns.first { it.matches(error) }.name,
+                confidence = calculateMatchConfidence(error, section),
+                excerpt = section.content.substringAroundMatch(error)
+            )
+        }
+        .sortedByDescending { it.confidence }
+
+    return FailureDiagnosis(error, location, matches,
+        matches.firstOrNull()?.section?.ref,
+        // Le concept sous-jacent est-il au bon niveau Bloom dans le corpus ?
+        detectBloomGap(error, location))
+}
+----
+
+===== Exemple concret
+
+```
+[ERROR] NullPointerException at PaymentService.java:42
+
+[DIAGNOSIS]
+matched_anti_pattern: "Services without @NonNull on injected dependencies"
+source: "Applied AI for Enterprise Java", chap 12, section "Guardrails"
+recommendation: "Add @NonNull to PaymentGateway injection, or wrap in Optional"
+bloom_gap: null  // le concept Injection est bien couvert à APPLY et EVALUATE
+confidence: 0.91
+```
+
+===== Ce que ça débloque
+
+- L'agent ne dit pas « NullPointerException ligne 42 » — il dit « anti-pattern
+  détecté : injection non null-safe, documenté dans Applied AI chap 12 »
+- Correction suggérée avec référence au corpus
+- Détection de Bloom Gap : l'erreur survient parce que le concept n'est couvert
+  qu'à UNDERSTAND dans le corpus → l'agent recommande d'acquérir de la doc niveau
+  APPLY avant de continuer
+
+==== Couche 4 — Dépendances : Extraction de la Documentation des Bibliothèques
+
+===== Le problème
+
+Ton code dépend de bibliothèques (LangChain4j, Spring Boot, PDFBox, Graphify...)
+dont la documentation officielle n'a jamais été acquise par le pipeline. L'agent
+connaît le corpus livresque mais ignore la documentation de référence des
+dépendances que le code *utilise effectivement*.
+
+===== La solution
+
+La tâche `acquireDependencyDocs` parse les `build.gradle.kts` de tous les
+projets du workspace, identifie les dépendances, localise leur documentation
+(javadoc, site officiel, README GitHub, guides) et l'ingère dans le pipeline :
+
+[source,kotlin]
+----
+data class DependencyDocTarget(
+    val groupArtifact: String,       // "dev.langchain4j:langchain4j"
+    val version: String,              // "1.0.0-beta3"
+    val docUrls: List<URL>,          // URLs de documentation détectées
+    val usedByProjects: List<String>, // projets qui dépendent de cette lib
+    val usedInFiles: List<String>,    // fichiers qui importent cette lib
+    val extractionStatus: ExtractionStatus
+)
+
+fun resolveDocUrls(dep: GradleDependency): List<URL> {
+    return buildList {
+        // 1. Javadoc officiel
+        add(URL("https://javadoc.io/doc/${dep.group}/${dep.artifact}/${dep.version}"))
+        // 2. Site du projet (détecté depuis le POM Maven Central)
+        val pom = fetchMavenPom(dep)
+        pom.scm?.url?.let { add(URL(it)) }
+        // 3. GitHub README.md
+        val githubUrl = pom.scm?.url?.toGitHubUrl()
+        githubUrl?.let { add(URL("$it/blob/main/README.md")) }
+        // 4. Guides / Reference docs
+        githubUrl?.let { add(URL("$it/tree/main/docs")) }
+        // 5. GitHub Wiki
+        githubUrl?.let { add(URL("$it/wiki")) }
+    }
+}
+----
+
+La tâche `acquireDependencyDocs` :
+. Parse tous les `build.gradle.kts` du workspace → liste unique des dépendances
+. Résout les URLs de documentation pour chaque dépendance
+. Télécharge et convertit en AsciiDoc (HTML → AsciiDoc, Markdown → AsciiDoc)
+. Injecte dans le pipeline standard : AsciiDoc → JSON LDD → chunks RAG → enrichissement
+
+===== Ce que ça débloque
+
+- « Dans `PaymentService.kt`, vous utilisez `langchain4j:1.0.0-beta3`.
+  La méthode `ChatModel.chat()` a été dépréciée en faveur de `ChatModel.generate()`
+  [source: langchain4j release notes v1.0.0-rc1] »
+- L'agent peut comparer la version utilisée avec la dernière version stable
+- Les API docs deviennent requêtables en LMD : « quelles méthodes de `StateGraph`
+  acceptent un `CompileConfig` ? »
+- Cross-book : le livre Applied AI documente LangChain4j, la javadoc officielle
+  le spécifie — les deux sources sont croisées dans la bibliothèque
+
+==== Couche 5 — Audit Croisé des Six Couches d'Augmentation
+
+===== Le concept
+
+Une fois les 6 couches en place (Corpus livresque + Dépendances + Code annoté +
+Delta + Erreurs + Bloom), la tâche `auditAugmentationCoverage` produit un
+rapport de **couverture contextuelle** du workspace :
+
+[source]
+----
+auditAugmentationCoverage
+    │
+    ├── Par module du workspace :
+    │   ├── Couverture corpus livresque : 78% (18/23 patterns documentés)
+    │   ├── Couverture dépendances : 65% (13/20 dépendances ont leur doc acquise)
+    │   ├── Annotation @ConceptSource : 32% (47/145 fichiers annotés)
+    │   ├── Couverture Bloom : 3.2 niveaux moyens (sur 6)
+    │   └── Anti-patterns détectables : 14 patterns connus, 3 actifs dans le code
+    │
+    ├── Par dépendance :
+    │   ├── Version utilisée vs dernière stable
+    │   ├── Méthodes dépréciées utilisées
+    │   └── CVE connues (si intégration OWASP)
+    │
+    ├── Deltas non documentés :
+    │   └── 12 fichiers modifiés depuis le dernier run → aucun ancré dans le corpus
+    │
+    └── Recommandations :
+        ├── Acquérir doc pour 7 dépendances manquantes (P1)
+        ├── Annoter 98 fichiers non tracés (P2)
+        └── Acquérir livre « Resilience Patterns » — lacune sur CircuitBreaker AVANCÉ (P3)
+
+[CTX] coverage_score=0.67 target=0.85 gaps=12 recommendations=9
+----
+
+==== Tableau de synthèse — Les Six Couches du Vecteur Composite Élargi
+
+[cols="1,2,2,3", options="header"]
+|===
+| Couche | Source | Tâche Gradle | Apport à l'agent
+| **RAG pgvector** | Chunks de toutes les sources vectorisées | `codexIngest` |
+Similarité sémantique — le flou productif
+| **Knowledge Graph** | Graphify sur workspace + corpus | `graphifyExport` |
+Relations exactes entre entités
+| **SQL LMD** | JSON LDD enrichi → PostgreSQL | `importBookSql` |
+Requêtage relationnel, ontologie calculée
+| **Bibliothèque** | Relations cross-books sur 5 critères | `assembleLibrary` |
+Vue systémique cross-corpus
+| **Bloom** | Niveaux d'appréhension par concept | `classifyBloom` |
+Qualification pédagogique du contexte
+| **Augmentations Code** | Code source + git + erreurs + dépendances |
+`annotateCodeSources`, `computeDelta`, `diagnoseFailure`, `acquireDependencyDocs` |
+Ancrage du code dans le corpus, conscience du changement, diagnostic, doc des dépendances
+|===
+
+==== Ce que les couches Code apportent à la gouvernance agent
+
+L'audit de code devient un processus continu et automatisé :
+
+- *`annotateCodeSources`* scanne le code, détecte les patterns, les ancre dans le
+  corpus → sortie : `@ConceptSource` inline ou rapport JSON
+- *`computeDelta`* calcule le changement depuis le dernier run → le Planning Expert
+  priorise les modules touchés
+- *`diagnoseFailure`* associe les erreurs aux anti-patterns documentés → correction
+  avec référence au corpus
+- *`acquireDependencyDocs`* ingère la documentation des bibliothèques → les API docs
+  deviennent requêtables comme le reste du corpus
+
+Ces quatre tâches ferment la boucle : le pipeline ne se contente plus d'extraire
+la connaissance des livres — il **l'injecte dans le code** et **apprend du code**
+en retour. Chaque erreur enrichit le corpus. Chaque modification met à jour le
+contexte. Chaque dépendance documentée élargit le champ de l'agent.
+
+==== Le principe des couches Code
+
+> Le vecteur composite ne doit pas seulement décrire ce que le corpus contient.
+> Il doit décrire ce que le code *fait*, ce qui a *changé*, ce qui a *échoué*,
+> et ce que les *dépendances* documentent. Ces quatre couches transforment l'agent
+> LangChain4j d'un lecteur de corpus en un **observateur du système vivant**.
+>
+> L'agent ne reçoit pas un contexte statique — il reçoit une photographie de
+> l'état du système à l'instant T, ancrée dans le corpus, annotée par Bloom,
+> informée par le delta, et enrichie par la documentation des bibliothèques
+> que le code consomme.
+
+==== Propositions additionnelles de mise en contact
+
+Au-delà des six couches documentées, voici les dimensions qui pourraient
+encore augmenter le contexte :
+
+*7. Historique des sessions agent*
+Toutes les sessions opencode (`.agents/sessions/NNN-*.adoc`) sont elles-mêmes
+un corpus. L'agent peut apprendre de ses propres décisions passées. « Dans la
+session 042, tu as choisi le pattern X pour le module auth. Aujourd'hui, le
+pattern Y est mieux documenté (Bloom EVALUATE dans Applied AI chap 12). Migrer ? »
+
+*8. Feedback de build (vert/rouge) comme signal*
+Chaque `./gradlew build` produit un statut. Ce statut, mis en série temporelle,
+indique une tendance. « Le module payment est vert depuis 3 semaines. Le module
+auth alterne vert/rouge — instabilité. » Le Planning Expert pondère ses EPICs
+sur les modules instables.
+
+*9. Pull Request / Code Review Context*
+Les PRs ouvertes, les commentaires de review, les approbations/blocages — tout
+cela est du contexte décisionnel. « La PR #23 sur le module auth est bloquée
+depuis 5 jours par un commentaire non résolu. » L'agent sait où l'humain a
+besoin d'aide et où le code est en friction.
+
+*10. Release Notes / Changelogs des dépendances*
+`acquireDependencyDocs` capture la doc statique. Mais les *changelogs* entre
+versions sont du contexte temporel. « LangChain4j 1.0.0-beta3 → 1.0.0 :
+`AiServices` est deprecated, `@Tool` change de signature. Ton code utilise
+`@Tool` 14 fois → plan de migration généré. »
+
+*11. StackOverflow / GitHub Issues / Discussions*
+Les questions et réponses publiques sur les bibliothèques que tu utilises sont
+un corpus vivant. « 3 issues GitHub ouvertes sur `langgraph4j:checkpoint-saver`.
+L'issue #142 décrit exactement ton problème de sérialisation. Workaround posté
+il y a 2 jours. »
+
+*12. Ontologie de la Gouvernance Agent elle-même*
+Les fichiers `.agents/` sont déjà parsés par `relocalizeAgents`. Mais leur
+*structure* peut être modélisée en ontologie. « La règle 2bis (filtre
+épistémique) est violée dans 3 sessions récentes. Le pattern de violation
+est : mention d'un client dans une section taguée Niveau 3. » L'agent audite
+sa propre gouvernance.
+
+=== Les Outils de Raisonnement — La Couche de Consommation Intelligente
+
+==== Le diagnostic
+
+Le pipeline acquiert et structure la connaissance. Mais il lui manque la
+couche qui transforme cette connaissance en **inférences** — en nouvelles
+conclusions produites par raisonnement, pas par simple recherche.
+
+Un système qui sait *trouver* une information n'est pas un système qui sait
+*penser avec*. Les quatre critères de la bibliothèque et les six couches du
+vecteur composite répondent à des requêtes. Ils ne raisonnent pas.
+
+Les vingt-et-un outils de raisonnement ci-dessous constituent la **couche de
+consommation intelligente** du pipeline. Certains sont directement
+algorithmisables (opérations SQL ou graphe sur les données structurées).
+D'autres sont du prompt engineering (le LLM reçoit un prompt structuré avec
+le corpus et une instruction de raisonnement). Tous partagent le même contrat :
+une tâche Gradle typée, un corpus en entrée, une inférence en sortie.
+
+==== Cartographie des outils par implémentabilité
+
+Chaque outil est classé selon qu'il peut être codé en pur Kotlin/SQL/Graphe
+(ALGO) ou qu'il nécessite un appel LLM avec un prompt structuré (PROMPT), ou
+une combinaison des deux (HYBRIDE).
+
+[cols="1,2,3,3", options="header"]
+|===
+| Outil | Mode | Implémentation | Exemple sur le corpus Applied AI
+| **Comparaison** | ALGO | SQL JOIN entre deux entités sur attributs communs |
+« Comparer les définitions de `Agent` dans Applied AI vs Implementing DDD »
+→ tableau différentiel généré automatiquement
+| **Classification** | ALGO | Déjà implémenté via `classifyBloom` +
+classification par type d'entité (framework/pattern/protocol) | « Classifier
+toutes les entités du corpus en : pattern architectural, protocole, framework,
+anti-pattern »
+| **Décomposition** | ALGO | Walk récursif du JSON LDD : livre → partie →
+chapitre → section → entité → bloc de code | « Décomposer le pattern
+Routing Agent en ses constituants : nœuds, arêtes conditionnelles, AI service
+classifieur, fallback »
+| **Inférence** | ALGO | Graphify path traversal : si A→B et B→C alors A→C |
+« LangGraph4j USES CheckpointSaver, CheckpointSaver IMPLEMENTS Serializable
+→ LangGraph4j REQUIRES serializable state »
+| **Déduction** | ALGO | Rules engine (Drools ou règles Kotlin) sur le
+knowledge graph | « SI entité est annotée @Tool ET entité n'est pas dans
+un bounded context → lacune de modélisation »
+| **Analyse / Synthèse** | ALGO | Analyse = décomposition (walk JSON LDD).
+Synthèse = `assembleLibrary` (agrégation cross-books) | « Synthétiser une
+définition canonique de `Bounded Context` depuis 4 livres qui le définissent »
+| **Généralisation** | ALGO | Détection de patterns communs à N entités →
+abstraction | « `Routing Agent`, `Supervisor Agent`, `Reactive Agent` →
+tous partagent : nœud de décision + routage conditionnel + fallback →
+pattern `Agent Dispatcher` »
+| **Distinction conceptuelle** | ALGO | SQL EXCEPT / DIFFERENCE entre les
+attributs de deux entités | « `Agent` vs `Tool` : l'agent initie, le tool
+répond. 0 attribut commun. Frontière nette. »
+| **Proportionalité** | ALGO | Ratio entre métriques du corpus | « Densité
+Bloom du concept `State Management` : 2.1 dans Applied AI, 4.3 dans
+Implementing DDD. Le ratio 2.05 → DDD est 2x plus profond sur ce sujet. »
+| **Syllogisme** | HYBRIDE | Graphe (prémisses) + LLM (conclusion) |
+Prémisse 1 : « Tout agent LangGraph4j a un State ». Prémisse 2 : « Routing
+Agent est un agent ». Conclusion (LLM) : « Donc Routing Agent doit définir
+un State serializable »
+| **Induction** | HYBRIDE | Détection de patterns récurrents (ALGO) + formulation
+de la loi générale (LLM) | « Dans 12/12 livres, le pattern est introduit avant
+son implémentation. Loi induite : tout livre technique suit REMEMBER → APPLY. »
+| **Abduction** | HYBRIDE | Observation d'un fait (ALGO) + génération de
+l'hypothèse la plus plausible (LLM) | « Fait : `PaymentService` a 3
+`@CircuitBreaker` mais 0 test d'intégration. Meilleure explication : le
+développeur ne connaît pas le pattern de test de résilience. »
+| **Raisonnement causal** | HYBRIDE | Chaîne causale extraite du corpus (ALGO)
++ explication (LLM) | « `NullPointerException` → injection non annotée
+`@NonNull` → absence de validation de dépendance → pas de test de
+configuration de contexte Spring »
+| **Raisonnement par l'absurde** | HYBRIDE | Génération de la prémisse opposée
+(ALGO) + démonstration de contradiction (LLM) | « Supposons qu'un agent
+LangGraph4j n'ait PAS de State. Alors le `CheckpointSaver` ne peut pas
+sauvegarder → pas de pause/reprise → contradiction avec le pattern
+Human Interaction documenté. »
+| **Contre-exemple / Réfutation** | HYBRIDE | Recherche d'exception dans le corpus
+(ALGO) + formulation (LLM) | « "Tous les agents LangGraph4j sont cycliques".
+Contre-exemple : le graph d'exemple du chap 10 avec START → createMessage →
+toUpperCase → END est acyclique. »
+| **Dialectique** | PROMPT | LLM avec corpus : thèse (livre A) → antithèse
+(livre B) → synthèse (LLM) | « Thèse Applied AI : agents = orchestrateurs LLM.
+Antithèse Implementing DDD : agents = processus métier. Synthèse : l'agent est
+un orchestrateur de contexte, qu'il soit LLM ou métier. »
+| **Analogie** | PROMPT | LLM avec deux concepts + leurs attributs extraits du
+corpus | « `LangGraph4j : Agent` est analogue à `Spring : Bean`. Le StateGraph
+est le ApplicationContext. Les nœuds sont les beans. Les arêtes sont les
+dépendances. »
+| **Expérience de pensée** | PROMPT | LLM avec un scénario hypothétique contraint
++ corpus | « Et si on remplaçait LangGraph4j par un workflow BPMN pour orchestrer
+les agents ? Qu'est-ce qu'on perdrait ? (Réponse : les checkpoints, le time travel,
+l'intégration native avec LangChain4j) »
+| **Méthode hypothético-déductive** | PROMPT | LLM : hypothèse → prédiction
+déduite du corpus → vérification | « Hypothèse : tout projet qui utilise
+LangChain4j sans LangGraph4j a du mal à gérer les workflows multi-étapes.
+Prédiction : le code actuel du workspace (sans LangGraph4j) devrait montrer
+des if/else de routage artisanal. Vérification : grep du code → confirmé. »
+| **Pensée systémique** | PROMPT | LLM avec le graphe complet (bibliothèque +
+dépendances + code + delta) | « Cartographier les boucles de rétroaction du
+workspace : le code modifié → build → erreur → correction → code modifié.
+Identifier les délais, les amplifications, les points d'étranglement. »
+| **Conceptualisation / Abstraction** | PROMPT | LLM avec N exemples concrets →
+extraction du concept abstrait | « `Tool`, `Agent`, `State`, `Graph` →
+abstraction : un système agentique est un graphe orienté d'acteurs
+étatiques communiquant par contrats typés. »
+
+Total : 9 outils algorithmisables, 7 hybrides, 5 purement prompt. La tendance
+est claire : plus l'outil manipule des structures connues (comparer, classer,
+décomposer), plus il est automatisable. Plus il manipule du sens (analogie,
+dialectique, expérience de pensée), plus il dépend du LLM.
+
+|===
+
+==== Architecture de consommation : la tâche `reason`
+
+Plutôt que 21 tâches Gradle distinctes, une tâche unifiée `reason` qui
+accepte un paramètre `-Pmode` et route vers la bonne stratégie :
+
+[source,bash]
+----
+# Algorithmique pur — pas d'appel LLM
+./gradlew reason -Pmode=compare -PentityA=Agent -PentityB=Tool
+./gradlew reason -Pmode=deduct -Ppremises="Agent HAS State, Routing IS Agent"
+
+# Hybride — pré-processing ALGO + conclusion LLM
+./gradlew reason -Pmode=abduct -Pobservation="PaymentService:3x@CircuitBreaker,0 test"
+./gradlew reason -Pmode=causal -Perror="NullPointerException:PaymentService.java:42"
+
+# Prompt — LLM avec corpus complet
+./gradlew reason -Pmode=dialectic -Pconcept="Agent Architecture"
+./gradlew reason -Pmode=analogy -Psource="LangGraph4j:Agent" -Ptarget="Spring:Bean"
+./gradlew reason -Pmode=systemsThinking -Pscope=workspace
+----
+
+===== Implémentation du routeur `reason`
+
+[source,kotlin]
+----
+abstract class ReasonTask : DefaultTask() {
+
+    @get:Input
+    abstract val mode: Property<String>         // compare, deduct, analogize...
+
+    @get:Input
+    abstract val entityA: Property<String>
+
+    @get:Input
+    abstract val entityB: Property<String>
+
+    @get:Optional
+    @get:Input
+    abstract val observation: Property<String>
+
+    @get:OutputFile
+    abstract val inferenceFile: RegularFileProperty
+
+    @TaskAction
+    fun reason() {
+        val result = when (mode.get()) {
+            "compare" -> compareEntities(entityA.get(), entityB.get())
+            "classify" -> classifyEntities(entityA.get())
+            "decompose" -> decomposeEntity(entityA.get())
+            "infer" -> inferFromGraph(entityA.get(), entityB.get())
+            "deduct" -> deductFromRules(entityA.get())
+            "distinguish" -> distinguishConcepts(entityA.get(), entityB.get())
+            "proportion" -> computeProportion(entityA.get(), entityB.get())
+
+            // Hybrides : ALGO structure → LLM conclusion
+            "syllogism", "induct", "abduct", "causal",
+            "absurd", "refute" -> hybridReason(mode.get(), entityA.get(),
+                entityB.get(), observation.getOrElse(""))
+
+            // Purement prompt : corpus + instruction LLM
+            "dialectic", "analogy", "thoughtExperiment",
+            "hypotheticoDeductive", "systemsThinking",
+            "conceptualize" -> promptReason(mode.get(), entityA.get(),
+                entityB.get(), observation.getOrElse(""))
+        }
+
+        inferenceFile.asFile.get().writeText(
+            StdoutFormatter.result(result)
+        )
+    }
+}
+----
+
+==== Ce que les outils de raisonnement apportent
+
+*Pour le Planning Expert* ::
+Au lieu de « décomposer l'intention en User Stories », le Planning Expert
+peut maintenant raisonner *sur* la décomposition :
+- `reason -Pmode=decompose -Pentity="Capsule Video Feature"` → arborescence
+  des sous-tâches avec prérequis Bloom
+- `reason -Pmode=deduct -Ppremises="EPIC-1 DEPENDS_ON CD-2, CDX-2 BLOCKS EPIC-1"`
+  → alerte de blocage avant exécution
+
+*Pour la Bibliothèque cross-book* ::
+Les 5 critères de la bibliothèque sont des opérations de comparaison et
+d'induction. Les outils de raisonnement les généralisent :
+- `reason -Pmode=analogy -Psource="Agent Architecture:Applied AI" -Ptarget="Microservices:Implementing DDD"` → « Les deux architectures sont
+  isomorphes : l'agent correspond au service, le tool au client HTTP, le
+  state au domain model »
+- `reason -Pmode=generalize -Pentities="Agent,Tool,State,Graph"` → abstraction
+  « Système Agentique = Graphe + Acteurs + Contrats + État »
+
+*Pour le développement par surveillance* ::
+Le nœud LangGraph4j qui supervise peut invoquer `reason` comme un outil :
+- Si le build échoue : `reason -Pmode=abduct -Pobservation="Compilation error:AuthService.kt"`
+  → hypothèse la plus probable
+- Si l'agent hésite entre deux décisions : `reason -Pmode=dialectic -Pconcept="Prochaine action"`
+  → thèse/antithèse/synthèse
+
+*Pour la génération de formations* ::
+- `reason -Pmode=conceptualize -Pentities="CircuitBreaker,Retry,Fallback"`
+  → concept abstrait « Resilience Pattern »
+- `reason -Pmode=proportion -PentityA="Applied AI" -PentityB="Implementing DDD"`
+  → ratio de couverture par niveau Bloom → quel livre pour quel public
+
+==== Le principe des outils de raisonnement
+
+> Le pipeline ne doit pas seulement *stocker* la connaissance — il doit
+> savoir *raisonner avec*. Les vingt-et-un outils de raisonnement sont la
+> couche de consommation intelligente : une tâche Gradle `reason` qui,
+> selon le mode, exécute une opération algorithmique sur les données
+> structurées, un raisonnement hybride (ALGO + LLM), ou un pur prompt
+> structuré sur le corpus.
+>
+> La séparation ALGO / HYBRIDE / PROMPT n'est pas une hiérarchie de valeur —
+> c'est une cartographie d'implémentabilité. Un syllogisme codé en règles
+> Kotlin est plus rapide et déterministe. Une analogie par LLM capture du
+> sens qu'aucun algorithme ne peut extraire. Le pipeline combine les deux
+> régimes dans la même interface unifiée : `./gradlew reason -Pmode=...`.
+
+==== Positionnement dans l'architecture
+
+Les outils de raisonnement ne sont pas une couche supplémentaire du vecteur
+composite — ils sont une **couche transverse** qui peut interroger toutes les
+autres :
+
+[source]
+----
+./gradlew reason -Pmode=... -Pcontext=rag|graph|sql|library|bloom|code|delta|error|deps|all
+----
+
+- `-Pcontext=rag` → le raisonnement s'appuie sur les chunks RAG uniquement
+- `-Pcontext=all` → le raisonnement reçoit le vecteur composite complet
+  (RAG + KG + SQL + Bibliothèque + Bloom + Code + Delta + Erreurs + Dépendances)
+
+C'est la différence entre « comparer deux entités » (ALGO, contexte SQL)
+et « faire une analogie systémique entre deux livres » (PROMPT, contexte all).
+La même tâche, le même contrat, un niveau de contexte paramétrable.
+
+=== Le LLM Trainer — L'Expert Qui Fabrique les Experts
+
+==== La cohérence découverte
+
+Le pipeline acquiert la connaissance. La bibliothèque la croise. Bloom la
+qualifie. Les outils de raisonnement la consomment. Mais **qui transforme
+cette connaissance en expert déployable** ?
+
+Aucun acteur existant n'est responsable de la *naissance* des experts
+spécialisés. Les experts CDA (Kotlin/Gradle/JHipster) et FPA
+(pédagogie/Qualiopi/Bloom) sont planifiés dans les roadmaps, mais personne
+n'a le rôle de les faire exister.
+
+Le LLM Trainer est cet acteur. Son travail : sur fourniture d'une spécification
+d'expert, collecter et construire le dataset, le distiller, fine-tuner le
+modèle, valider ses compétences, et l'intégrer dans l'écosystème d'agents.
+
+Ce qui rend son recrutement immédiatement pertinent : son travail est déjà
+amorcé par les couches existantes du pipeline.
+
+==== Les trois piliers déjà construits pour lui
+
+*Pilier 1 — Le dataset est déjà structuré* ::
+Le JSON LDD enrichi (chapitres, sections, entités annotées Bloom, chunks RAG,
+nœuds Graphify) est le matériau brut de tout dataset d'entraînement. Le
+LLM Trainer n'a pas à extraire — il a à **filtrer et composer**.
+
+*Pilier 2 — Les spécifications d'experts sont déjà formalisées* ::
+`PLANNING_EXPERT_ONTOLOGY.adoc` définit le cahier des charges d'un expert :
+intention structurée → EPICs → User Stories → tâches Gradle. Le LLM Trainer
+reçoit une spec au format connu et sait quelles compétences l'expert doit
+maîtriser.
+
+*Pilier 3 — L'évaluation est déjà couverte* ::
+`classifyBloom` mesure la profondeur de couverture d'un concept. La
+bibliothèque mesure la couverture cross-books. L'audit de couverture
+(`auditAugmentationCoverage`) mesure les lacunes. Le LLM Trainer utilise
+ces mêmes métriques pour évaluer si le modèle fine-tuné a bien assimilé
+le domaine.
+
+==== Les quatre phases du LLM Trainer
+
+===== Phase 1 — Collecte du dataset
+
+À partir d'une spec d'expert (ex: « Expert CDA : Kotlin, Gradle, JHipster,
+Spring Boot, hexagonal architecture »), le LLM Trainer lance
+`assembleTrainingDataset` :
+
+[source,kotlin]
+----
+data class ExpertSpec(
+    val name: String,                    // "CDA Expert"
+    val domains: List<String>,           // ["kotlin", "gradle", "spring-boot"]
+    val bloomTarget: BloomLevel,         // CREATE — l'expert doit pouvoir générer
+    val boundedContexts: List<String>,   // bounded contexts à couvrir
+    val excludedPatterns: List<String>,  // anti-patterns à éviter
+    val referenceBooks: List<String>     // ISBNs des livres de référence
+)
+
+data class TrainingDataset(
+    val expertSpec: ExpertSpec,
+    val sections: List<EnrichedSection>,     // sections du corpus filtrées
+    val codeExamples: List<CodeBlock>,       // blocs de code extraits
+    val qaPairs: List<QuestionAnswerPair>,   // paires Q/R générées
+    val patterns: List<DesignPattern>,       // patterns documentés
+    val graphSubgraph: KnowledgeGraph,       // sous-graphe Graphify du domaine
+    val coverage: BloomCoverage,             // couverture Bloom par concept
+    val split: DatasetSplit                  // train/val/test
+)
+
+data class DatasetSplit(
+    val train: Float,   // 0.7
+    val validation: Float,  // 0.15
+    val test: Float     // 0.15
+)
+----
+
+`assembleTrainingDataset` interroge toutes les couches du pipeline :
+. *Corpus livresque* → sections qui mentionnent les entités du domaine,
+  filtrées par `bloom >= bloomTarget`
+. *Dépendances* → documentation des bibliothèques listées dans la spec
+. *Code source* → fichiers Kotlin/Java annotés `@ConceptSource` dans le
+  domaine cible, plus les fichiers du workspace qui implémentent ces patterns
+. *Knowledge Graph* → extrait le sous-graphe des entités du domaine avec
+  leurs relations (imports, dépendances, hiérarchie)
+. *Paires Q/R* → générées automatiquement depuis les sections :
+  titre = question, contenu = réponse, ou via `reason -Pmode=abduct`
+
+===== Phase 2 — Distillation du dataset
+
+Le dataset brut est trop volumineux pour un fine-tuning efficace. La
+distillation réduit le bruit et maximise la densité d'information :
+
+[source,kotlin]
+----
+data class DistillationConfig(
+    val maxTokens: Int = 10_000_000,      // budget tokens total
+    val bloomPriority: List<BloomLevel>    // priorité décroissante
+        = listOf(CREATE, EVALUATE, ANALYZE, APPLY, UNDERSTAND, REMEMBER),
+    val deduplicationThreshold: Float = 0.92, // similarité max entre exemples
+    val balanceByConcept: Boolean = true,     // équilibrer les concepts
+    val minExamplesPerConcept: Int = 5
+)
+
+fun distill(dataset: TrainingDataset,
+            config: DistillationConfig): DistilledDataset {
+    // 1. Trier par priorité Bloom → prioriser les niveaux hauts
+    val sorted = dataset.sections.sortedByDescending {
+        config.bloomPriority.indexOf(it.bloom!!.dominant)
+    }
+
+    // 2. Dédupliquer → supprimer les exemples trop similaires
+    val deduplicated = deduplicateByEmbedding(sorted, config.deduplicationThreshold)
+
+    // 3. Équilibrer → au moins N exemples par concept
+    val balanced = balanceByConcept(deduplicated, config.minExamplesPerConcept)
+
+    // 4. Tronquer au budget tokens
+    val finalSections = balanced.take(config.maxTokens)
+
+    // 5. Générer les prompts d'entraînement formatés
+    val trainingPrompts = finalSections.map { section ->
+        TrainingPrompt(
+            system = buildSystemPrompt(dataset.expertSpec, section.bloom!!.dominant),
+            user = section.content,
+            assistant = buildAssistantResponse(section)
+        )
+    }
+
+    return DistilledDataset(
+        prompts = trainingPrompts,
+        stats = DistillationStats(
+            originalSections = dataset.sections.size,
+            distilledSections = finalSections.size,
+            compressionRatio = dataset.sections.size.toFloat() / finalSections.size,
+            bloomDistribution = bloomDistribution(finalSections),
+            conceptsCovered = conceptsIn(finalSections).size
+        )
+    )
+}
+----
+
+===== Phase 3 — Fine-tuning
+
+La distillation produit un dataset au format standard (JSON Lines, format
+conversationnel). Le LLM Trainer orchestre le fine-tuning :
+
+[source]
+----
+assembleTrainingDataset  →  distill  →  fine-tune  →  validate  →  deploy
+       │                       │           │            │           │
+       ▼                       ▼           ▼            ▼           ▼
+  dataset.json            distilled    checkpoint    benchmark   Maven Central
+  (office/data-          .jsonl       .gguf          results     ou Ollama
+   engineering/llm/)                                (Bloom +     local
+                                                     coverage)
+----
+
+Le fine-tuning lui-même est délégué à des outils externes (Unsloth, Axolotl,
+MLX, ou un service cloud), mais le LLM Trainer est responsable de :
+- La qualité du dataset en entrée
+- La configuration d'entraînement (LoRA rank, learning rate, epochs)
+- La validation post-entraînement (benchmark Bloom, coverage, régression)
+- La décision go/no-go : déployer ou itérer
+
+===== Phase 4 — Intégration dans l'écosystème
+
+Une fois fine-tuné et validé, l'expert est intégré :
+
+. *Publication* — modèle publié en `.gguf` dans `office/data-engineering/llm/`
+  ou sur Ollama/HuggingFace
+. *Enregistrement* — le JSON LDD de la bibliothèque enregistre l'expert comme
+  un « livre » supplémentaire (métadonnées, domaines, Bloom)
+. *Découverte* — les autres experts (Planning Expert, outils de raisonnement)
+  peuvent interroger l'expert via LangChain4j comme n'importe quelle source
+. *Gouvernance* — l'expert reçoit son propre `.agents/` (AGENT.adoc, INDEX,
+  SESSION_CHECKLIST)
+
+==== Le LLM Trainer et les autres experts
+
+[plantuml]
+----
+@startuml
+skinparam backgroundColor transparent
+
+rectangle "PLANNING EXPERT" as planner #FFCC80 {
+    [Décompose intention\nen EPICs/US]
+    [Spécifie le besoin\nd'un nouvel expert]
+}
+
+rectangle "LLM TRAINER" as trainer #E1BEE7 {
+    [Assemble dataset]
+    [Distille]
+    [Fine-tune]
+    [Valide]
+    [Intègre]
+}
+
+rectangle "PIPELINE CODEX" as codex #LightBlue {
+    [Corpus structuré]
+    [JSON LDD enrichi]
+    [Chunks RAG]
+    [Knowledge Graph]
+}
+
+rectangle "EXPERT CDA" as cda #C8E6C9 {
+    [Kotlin/Gradle/JHipster]
+    [Hexagonal Architecture]
+    [Spring Boot]
+}
+
+rectangle "EXPERT FPA" as fpa #FFCDD2 {
+    [Pédagogie/Qualiopi]
+    [Taxonomie de Bloom]
+    [Ingénierie de formation]
+}
+
+planner --> trainer : "Spec : Expert CDA\n(domaines, Bloom, BCs)"
+trainer --> codex : "Requête : sections\nKotlin+Gradle+Spring\nBloom ≥ APPLY"
+codex --> trainer : "Dataset brut\n(structuré, enrichi)"
+trainer --> cda : "Fine-tune → déploiement"
+trainer --> fpa : "Fine-tune → déploiement"
+
+cda --> planner : "Feedback : build\nvert/rouge sur tâches CDA"
+fpa --> planner : "Feedback : validation\npédagogique sur formations"
+
+trainer --> trainer : "Évaluation continue\n(Bloom, coverage,\nbenchmark)"
+@enduml
+----
+
+La boucle est fermée : le Planning Expert exprime le besoin → le LLM Trainer
+fabrique l'expert → l'expert alimente le Planning Expert en feedback →
+le LLM Trainer améliore l'expert.
+
+==== Le modèle canonique de l'expert
+
+Un expert n'est pas réductible à son fine-tuning. C'est un **système complet**
+dont le modèle n'est que le moteur. Le LLM Trainer doit fournir à chaque
+expert — au moment de son déploiement — l'ensemble des artefacts qui
+constituent son identité opérationnelle.
+
+===== Data class canonique
+
+[source,kotlin]
+----
+data class DeployedExpert(
+    // IDENTITÉ
+    val id: String,                           // "cda-expert"
+    val name: String,                         // "Expert CDA"
+    val version: String,                      // "1.2.0"
+
+    // DOMAINE
+    val domains: List<String>,                // ["kotlin", "gradle", "spring-boot"]
+    val boundedContexts: List<BoundedContext>, // bounded contexts maîtrisés
+    val entities: List<Entity>,               // entités du domaine connues
+    val bloomProfile: BloomProfile,           // niveaux Bloom atteints par concept
+
+    // CORPUS ONTOLOGIQUE
+    val ontology: DomainOntology,             // ontologie dérivée du corpus
+    val conceptHierarchy: ConceptTree,        // arborescence des concepts (spécialisation/généralisation)
+    val definitions: Map<String, String>,     // définition canonique par entité
+
+    // RAG
+    val ragStore: RagStore,                   // pgvector filtré au domaine
+    val embeddingModel: String,               // "AllMiniLmL6V2" ou spécifique
+    val topKDefault: Int,                     // 10
+    val zoneFilter: Zone,                     // OSS / OFFICE / CSS
+
+    // KNOWLEDGE GRAPH
+    val knowledgeGraph: KnowledgeSubgraph,    // sous-graphe Graphify du domaine
+    val graphTraversalDepth: Int,             // profondeur de navigation par défaut
+
+    // BIBLIOGRAPHIE
+    val bibliography: List<BookRef>,          // livres et sources d'entraînement
+    val dependencyDocs: List<DependencyRef>,   // documentation des libs maîtrisées
+    val trainingDatasetRef: DatasetRef,       // référence au dataset utilisé
+
+    // TOOLS (TÂCHES GRADLE)
+    val tools: List<ExpertTool>,              // tâches Gradle que l'expert peut invoquer
+
+    // GOUVERNANCE
+    val agentGovernance: AgentGovernance,     // .agents/ dédié
+    val communicationContract: CommunicationContract,  // stdout / A2A / commit+push
+
+    // CYCLE DE VIE
+    val lifecycle: ExpertLifecycle,           // historique d'entraînement, retrain schedule
+    val dependencies: List<ExpertDependency>, // autres experts requis
+
+    // SÉCURITÉ
+    val guardrails: List<Guardrail>,          // contraintes impératives (ex: jamais commit sans validation)
+    val antiPatternAwareness: List<AntiPattern> // patterns à éviter, documentés
+)
+----
+
+===== Détail des attributs
+
+*Corpus ontologique* ::
+L'expert ne reçoit pas un livre — il reçoit l'ontologie du domaine extraite
+de tous les livres qui le couvrent. `classifyBloom` + `deriveOntology` ont
+déjà calculé les bounded contexts et la hiérarchie des concepts. L'expert
+hérite de cette structure comme son modèle mental natif.
+
+*RAG filtré* ::
+L'expert a son propre pgvector store, filtré aux sections du corpus qui
+relèvent de ses domaines. Il ne requête pas le RAG global du workspace —
+il requête *son* RAG, optimisé pour ses concepts, sans bruit cross-domaine.
+La tâche `createExpertRagStore` extrait les chunks du domaine depuis le
+RAG global et les réplique dans un store dédié.
+
+*Knowledge Graph* ::
+Le sous-graphe Graphify de l'expert contient les entités de son domaine et
+leurs relations (2 niveaux de voisinage par défaut). Quand l'expert doit
+comprendre comment `CircuitBreaker` se connecte à `Fallback`, il navigue
+*son* graphe, pas le graphe global où `CircuitBreaker` est aussi relié à
+des concepts électriques qu'il ne maîtrise pas.
+
+*Bibliographie* ::
+Chaque expert sait d'où il vient. La bibliographie est le JSON LDD des
+livres, articles, et documentations qui ont servi à son entraînement.
+C'est traçable, versionné, et auditable. Si une erreur est détectée dans
+le comportement de l'expert, on peut remonter à la source exacte
+(livre X, chapitre Y, section Z).
+
+*Tools (tâches Gradle)* ::
+Les outils de l'expert sont des tâches Gradle. L'Expert CDA a accès à
+`analyzeCode`, `refactoModule`, `generateTests`, `auditDependencies`.
+L'Expert FPA a accès à `validateFormation`, `generateSequencePedagogique`,
+`auditBloom`. Ces tâches sont son *toolset* — ce qu'il peut *faire*, pas
+seulement ce qu'il *sait*.
+
+[source,kotlin]
+----
+data class ExpertTool(
+    val gradleTask: String,              // "analyzeCode"
+    val description: String,             // "Analyse un module avec contexte augmenté"
+    val parameters: List<ToolParameter>, // -Ptarget, -Pcontext, -Pbloom
+    val requiredBloom: BloomLevel,       // niveau Bloom minimum pour utiliser cet outil
+    val triggersCiCd: Boolean,           // peut être déclenché par CI/CD ?
+    val requiresHumanApproval: Boolean,  // nécessite validation humaine ?
+    val outputContract: String           // format stdout attendu
+)
+----
+
+*Communication contract* ::
+Comment l'expert parle aux autres. Trois modes coexistent :
+- *stdout* → pour l'invocation directe par opencode ou un autre expert
+- *A2A (Agent-to-Agent)* → pour la communication inter-experts standardisée
+- *Commit + Push* → pour le mode asynchrone CI/CD
+
+*Cycle de vie* ::
+L'expert n'est pas figé. Il a un historique d'entraînement (dataset v1.0 →
+v1.1 → v1.2), un planning de retrain (déclenché par delta du corpus > seuil),
+et une stratégie de dépréciation (quand un nouvel expert le remplace).
+
+===== Diagramme de l'expert complet
+
+[plantuml]
+----
+@startuml
+skinparam backgroundColor transparent
+skinparam packageStyle rectangle
+
+package "EXPERT CDA v1.2.0" as cda #C8E6C9 {
+
+    package "IDENTITÉ" as ident #E8F5E9 {
+        [id: cda-expert]
+        [domaines: Kotlin, Gradle, Spring Boot]
+        [version: 1.2.0]
+    }
+
+    package "CONNAISSANCE" as know #BBDEFB {
+        [Ontologie : 4 bounded contexts,\n23 entités, 47 relations]
+        [Bloom : CREATE sur Gradle Plugin,\nEVALUATE sur Spring Boot]
+        [Arbre de concepts :\nArchitecture → Hexagonale → Ports/Adapters]
+    }
+
+    package "MÉMOIRE" as memo #FFF9C4 {
+        [RAG : pgvector filtré,\n312 chunks, zone OSS+OFFICE]
+        [Knowledge Graph : sous-graphe\nGraphify, 23 nœuds, 47 arêtes]
+        [Bibliographie : 3 livres,\n4 documentations de dépendances]
+    }
+
+    package "ACTION" as action #FFCC80 {
+        [Tools : analyzeCode,\nrefactoModule, generateTests,\nauditDependencies]
+        [Communication : stdout + A2A\n+ commit+push]
+    }
+
+    package "GOUVERNANCE" as gov #F3E5F5 {
+        [.agents/ : AGENT.adoc,\nINDEX, CHECKLIST, PROCEDURE]
+        [Guardrails : pas de commit\nauto, pas de publish auto]
+        [Anti-patterns connus : 14]
+    }
+
+    package "CYCLE DE VIE" as life #FFCDD2 {
+        [Entraîné : dataset v1.2.0]
+        [Retrain : si delta corpus > 8%]
+        [Dépendances : Expert Graphify]
+    }
+}
+
+ident --> know : "structure"
+know --> memo : "alimente"
+memo --> action : "informe"
+action --> gov : "respecte"
+gov --> life : "évolue"
+@enduml
+----
+
+==== Ce que ce modèle canonique change
+
+*Pour le LLM Trainer* ::
+`deployExpert` ne se contente plus de publier un `.gguf`. Elle provisionne
+l'ensemble des artefacts : RAG filtré, sous-graphe Graphify, ontologie,
+tools enregistrés, `.agents/`, contrat de communication. Le déploiement
+est une tâche Gradle atomique : soit tout est prêt, soit rien n'est déployé.
+
+*Pour le Planning Expert* ::
+Quand le Planning Expert doit router une intention vers un expert, il
+consulte le registre des experts. Il voit immédiatement :
+- Quels domaines l'expert couvre (et à quel niveau Bloom)
+- Quels tools il peut invoquer (et leurs paramètres)
+- Quelles dépendances il a (experts requis en amont)
+- Quel est son contrat de communication (stdout ? A2A ? synchrone ?)
+
+Le routage n'est plus heuristique — il est déterministe.
+
+*Pour la Bibliothèque* ::
+L'expert devient une entrée de la bibliothèque au même titre qu'un livre.
+Les critères cross-book s'appliquent entre experts et livres, et entre
+experts eux-mêmes. « L'Expert CDA et le livre Applied AI partagent 18
+entités sur 23. Bloom aligné à 82%. L'expert est une distillation fidèle
+du corpus. »
+
+*Pour le développement par surveillance* ::
+Le nœud LangGraph4j qui supervise peut interroger l'expert sur ses propres
+capacités : « Expert CDA, peux-tu traiter cette tâche ? » → réponse avec
+niveau de confiance, outils disponibles, bloom requis. Si la confiance est
+basse, le graphe route vers un autre expert ou interrompt pour validation
+humaine.
+
+==== Fonctions additionnelles de l'expert
+
+Au-delà des attributs, l'expert a des **fonctions actives** qu'il peut
+exercer :
+
+*F1 — Auto-évaluation* ::
+`./gradlew expertSelfAudit -Pexpert=cda` → l'expert mesure sa propre
+couverture, détecte ses lacunes, et suggère des acquisitions au LLM Trainer.
+
+*F2 — Mise à jour incrémentale* ::
+Quand un nouveau livre est ingéré dans le corpus, l'expert reçoit un delta.
+`retrainExpert` ne refait pas l'entraînement complet — il fait un
+fine-tuning incrémental sur les nouvelles sections uniquement.
+
+*F3 — Délégation* ::
+Un expert peut déléguer une sous-tâche à un autre expert. L'Expert CDA, face
+à un problème de pédagogie dans la génération d'un exercice, délègue à
+l'Expert FPA via A2A. L'Expert CDA ne devient pas pédagogue — il sait *qui*
+l'est.
+
+*F4 — Explication traçable* ::
+Quand l'expert produit une réponse, il peut citer ses sources. « Cette
+recommandation vient de Applied AI chap 12 (EVALUATE) + Spring Boot docs
+v3.4.1. Confiance : 0.91. » Chaque inférence est auditable jusqu'à la
+section du corpus qui l'a fondée.
+
+*F5 — Détection d'obsolescence* ::
+L'expert compare sa bibliographie avec les versions courantes des
+dépendances. « Tu utilises LangChain4j 1.0.0-beta3, je suis entraîné sur
+1.0.0-beta3. La version stable est 1.1.0. 3 de mes 23 entités peuvent
+être obsolètes. Demander un retrain ? »
+
+*F6 — Interopérabilité cross-expert* ::
+Deux experts peuvent raisonner ensemble via `reason -Pmode=dialectic`
+appliqué à leurs ontologies respectives. Le résultat est une synthèse
+qui n'appartient à aucun des deux — un troisième point de vue émergent.
+
+==== Le principe de l'expert complet
+
+> Un expert n'est pas un modèle fine-tuné avec un domaine. C'est un système
+> autonome qui possède : son ontologie (ce qu'il sait), son RAG (sa mémoire
+> sémantique), son knowledge graph (ses relations structurées), sa
+> bibliographie (ses sources traçables), ses tools (ce qu'il peut faire),
+> sa gouvernance (ses règles), et son cycle de vie (son évolution).
+>
+> Le LLM Trainer ne déploie pas des modèles — il déploie des systèmes
+> agents complets, prêts à raisonner, agir, déléguer, et apprendre.
+
+==== Extension des tâches du LLM Trainer
+
+[cols="1,2,3", options="header"]
+|===
+| Tâche | Phase | Ce qu'elle fait
+| `createExpertRagStore` | Déploiement | Extrait les chunks du domaine depuis
+le RAG global → pgvector store dédié à l'expert
+| `createExpertKnowledgeSubgraph` | Déploiement | Extrait le sous-graphe
+Graphify du domaine de l'expert
+| `compileExpertOntology` | Déploiement | Assemble l'ontologie, l'arbre de
+concepts, et les définitions canoniques depuis le corpus
+| `publishExpertTools` | Déploiement | Enregistre les tâches Gradle de l'expert
+dans le registre des tools
+| `initExpertGovernance` | Déploiement | Génère `.agents/` et le contrat de
+communication de l'expert
+| `expertSelfAudit` | Cycle de vie | Auto-évaluation : couverture, lacunes,
+suggestions d'acquisition
+| `expertCrossAudit` | Cycle de vie | Deux experts s'auditent mutuellement :
+alignement ontologique, complémentarité, redondance
+| `retireExpert` | Fin de vie | Dépréciation : archive le modèle, notifie les
+dépendants, propose un successeur
+|===
+
+Le LLM Trainer ne produit pas seulement des modèles — il produit des
+**datasets certifiés**. Un dataset pour Expert CDA est un artefact versionné,
+auditable, réutilisable :
+
+- *Versionné* — `cda-expert-dataset-v1.2.0.jsonl` suit le versioning sémantique
+- *Auditable* — chaque exemple a une provenance (livre, chapitre, section,
+  Bloom) et un hash de contenu
+- *Composable* — les datasets de plusieurs domaines peuvent être fusionnés
+  pour créer un expert multi-domaine
+- *Publishable* — un dataset de qualité peut être publié sur HuggingFace
+  comme contribution open source
+
+C'est l'équivalent pour les LLMs de ce que Maven Central est pour les
+bibliothèques Java : un registre de datasets certifiés, traçables, et
+réutilisables.
+
+==== Les tâches Gradle du LLM Trainer
+
+[cols="1,2,3", options="header"]
+|===
+| Tâche | Phase | Ce qu'elle fait
+| `assembleTrainingDataset` | Collecte | Interroge le pipeline (corpus + deps
++ code + Graphify) → dataset brut structuré
+| `distillDataset` | Distillation | Déduplique, équilibre, priorise Bloom,
+tronque → dataset d'entraînement optimisé
+| `exportTrainingFormat` | Export | Convertit en format cible (JSONL
+conversationnel, Alpaca, ShareGPT) pour l'outil de fine-tuning
+| `validateModel` | Validation | Benchmark Bloom + coverage + anti-pattern
+detection → rapport de compétence
+| `deployExpert` | Déploiement | Publication du modèle + enregistrement dans
+la bibliothèque + création `.agents/`
+| `retrainExpert` | Itération | Delta du corpus depuis le dernier
+entraînement → fine-tuning incrémental
+|===
+
+==== Le principe du LLM Trainer
+
+> Le LLM Trainer est l'expert qui fabrique les experts. Il prend une
+> spécification, assemble un dataset depuis le pipeline de connaissance,
+> le distille, fine-tune un modèle, valide ses compétences, et l'intègre
+> dans l'écosystème.
+>
+> Son travail n'est pas manuel — il est automatisé par les couches
+> existantes du pipeline. Le dataset n'est pas construit à la main —
+> il est requis depuis le corpus structuré. La validation n'est pas
+> subjective — elle est mesurée par Bloom, la couverture, et les
+> benchmarks.
+>
+> Le LLM Trainer est le chaînon qui transforme le capital fixe
+> (la connaissance extraite) en capital humain synthétique
+> (les experts fine-tunés). Sans lui, le pipeline est une bibliothèque
+> sans lecteurs spécialisés. Avec lui, chaque livre ingéré est un
+> expert potentiel.
+
+=== Gradle Comme Conscience du Projet — Ce Qu'Aucun Autre Outil Ne Peut Faire
+
+==== Le diagnostic
+
+Tout ce que le pipeline construit — extraction de connaissance, enrichissement
+croisé, bibliothèque, Bloom, outils de raisonnement, experts — repose sur une
+infrastructure qui pourrait théoriquement être portée par autre chose que
+Gradle. Du code Kotlin qui parse des PDFs, interroge pgvector, appelle des
+LLMs : un `main()` suffirait.
+
+Mais ce serait passer à côté de ce que Gradle *sait déjà* du projet sans qu'on
+ait à le lui apprendre.
+
+==== Ce que Gradle sait nativement
+
+Gradle n'est pas un exécuteur de tâches. C'est un **modèle du projet** que
+le build script déclare et que le runtime Gradle résout. Chaque projet
+Gradle contient, avant même qu'on écrive une seule tâche custom, une
+quantité d'information structurée que le pipeline peut consommer :
+
+[cols="1,3,3", options="header"]
+|===
+| Source Gradle | Ce qu'elle expose | Usage pipeline
+| **Dependency graph**
+`configurations.compileClasspath.resolvedConfiguration` | Graphe complet
+des dépendances : GA, version, licence, dépendances transitives, repository
+d'origine, exclusions | Déjà plus riche que `acquireDependencyDocs` seul —
+Gradle sait quelle version est *effectivement résolue* (pas celle déclarée),
+quelle dépendance est *transitive* (pas directe), et quel conflit de
+version a été tranché
+| **Source sets**
+`sourceSets.main.java.srcDirs` | Arborescence exacte des sources :
+main/test/integration, chemins, filtres d'inclusion/exclusion,
+`generatedSources` | Le pipeline sait où chercher le code à annoter
+(`@ConceptSource`) sans parcourir tout le filesystem
+| **Task graph**
+`project.tasks`, `gradle.taskGraph` | DAG complet des tâches : nom, type,
+dépendances (dependsOn, finalizedBy, mustRunAfter), inputs/outputs déclarés |
+Prêt à être exporté en graphe LangGraph4j : chaque tâche = un nœud,
+chaque dependsOn = une arête
+| **Incremental build**
+`task.inputs.properties`, `task.outputs.files` | Pour chaque tâche : ce qui
+a changé, ce qui est UP-TO-DATE, ce qui doit être réexécuté | Déjà un
+`computeDelta` natif, plus fin que `git diff` car il sait que le fichier
+a changé mais que la tâche n'a pas besoin d'être relancée (ou l'inverse)
+| **Extensions / conventions**
+`project.extensions`, `project.convention` | Modèle de configuration
+fortement typé : `kotlin { jvmToolchain(21) }`, `java { sourceCompatibility }`
+| L'ADN du projet — langage, version JVM, plugins appliqués, conventions
+héritées. Le Planning Expert peut adapter ses EPICs à la stack réelle
+| **Composite builds**
+`gradle.includedBuilds` | Projets inclus dans un composite build : chemins,
+noms, tâches exposées | La bibliothèque cross-projets est déjà modélisée
+par Gradle avant même qu'on écrive `assembleLibrary`
+| **Build scans**
+`--scan` | Données de performance : durée des tâches, cache hits/misses,
+graphe de dépendances visualisable, résolution de dépendances chronométrée |
+Le Planning Expert peut prioriser les EPICs sur les tâches les plus lentes
+ou les plus fréquemment invalidées
+| **Module metadata**
+`project.group`, `project.version`, `project.description`, `gradlePlugin.plugins` | Identité complète du projet : groupId, artifactId, version,
+plugins publiés, tags, description | L'équivalent du JSON LDD pour le projet
+lui-même — le pipeline peut s'auto-décrire
+|===
+
+==== Pourquoi aucun autre outil ne peut faire ça
+
+- *Maven* a un lifecycle, pas un task graph. Il exécute des phases, pas
+  un DAG navigable. Pas d'inputs/outputs déclaratifs → pas d'UP-TO-DATE
+  consommable. Pas de Kotlin DSL → pas d'extensions typées.
+- *Bazel* a des builds hermétiques et un graphe d'actions, mais pas de
+  modèle de projet riche. Pas de source sets, pas de conventions, pas
+  d'extensions. C'est un exécuteur pur, pas un modèle du projet.
+- *Make* est un moteur de règles fichiers. Aucune notion de projet, de
+  dépendance, de configuration typée.
+- *Nx / Turborepo* orchestrent des tâches mais ne savent rien du langage,
+  des dépendances, des source sets. Ils sont au-dessus du build, pas dedans.
+- *Bazel* + *Buck* + *Pants* : monorepo builds, mais pas de runtime
+  introspection. Le build est une fonction pure → pas d'état navigable
+  après exécution.
+- *Mill* (Scala) : le plus proche, mais pas d'écosystème de plugins
+  comparable, pas de convention plugins, pas de Kotlin DSL.
+
+Gradle est le seul à exposer simultanément : le graphe de tâches (DAG
+navigable), le modèle de dépendances (résolu, pas déclaré), la configuration
+typie (extensions/conventions), les source sets (anatomie du projet), et
+l'incrémentalité (ce qui a changé). Aucun autre outil ne combine ces cinq
+dimensions dans un même runtime — à une exception près, qui mérite d'être
+traitée séparément.
+
+===== Le cas Mill
+
+Mill n'est pas un sous-Maven comme les autres. Il est le seul outil qui
+*pourrait* approcher ce que Gradle fait pour le pipeline — mais avec des
+limites qui, dans l'état actuel de l'écosystème, le rendent moins adapté
+à ce workspace spécifique.
+
+*Ce que Mill fait bien — et parfois mieux que Gradle :*
+
+- *Build programmatique natif* — un `build.sc` est du Scala exécuté
+  directement, pas un DSL interprété. Les tâches sont des fonctions Scala.
+  Le graphe est un graphe de fonctions, pas un graphe d'objets configurés.
+  Pour un pipeline qui veut *raisonner sur le build*, avoir le build comme
+  code plutôt que comme configuration est conceptuellement plus pur.
+- *Graphe de tâches réflexif* — `mill resolve _`, `mill show`, `mill plan`
+  exposent le graphe de tâches résolu, avec les dépendances inter-modules.
+  C'est plus proche d'une API de requêtage que les `TaskContainer` de
+  Gradle, qui sont des registres, pas des graphes navigables
+  programmatiquement.
+- *Modules comme valeurs* — un module Mill est un objet Scala. Ses
+  dépendances sont des références à d'autres objets. Le dependency graph
+  n'est pas déclaré en strings (`implementation("group:artifact:version")`)
+  — il est typé (`def moduleDeps = Seq(myModule)`) et résolu à la
+  compilation Scala. Pour `annotateCodeSources`, un graphe de dépendances
+  typé au langage est plus riche qu'un graphe résolu depuis Maven.
+- *Cross-builds natifs* — `cross` est un citoyen de première classe. Un
+  projet cross-compilé expose ses variantes comme des dimensions du graphe.
+  Le pipeline peut requêter : « quelles versions de ce module sont
+  impactées par le delta ? »
+- *Pas de cycle de vie en phases* — Mill n'a pas de `clean → compile → test`.
+  Chaque tâche est une cible indépendante. Le graphe est un vrai DAG de
+  tâches, pas un DAG déguisé en séquence linéaire. C'est plus proche du
+  modèle mental de LangGraph4j que le `dependsOn` Gradle qui peut cacher
+  des dépendances implicites de plugin.
+
+*Ce qui manque à Mill pour cette architecture spécifique :*
+
+- *Écosystème de plugins* — Gradle a `java-gradle-plugin`, le Plugin Portal,
+  `publishToMavenLocal`. Mill n'a pas de mécanisme standardisé de packaging
+  et publication de plugins. Pour un workspace où chaque projet est un
+  plugin consommé par `engine/`, c'est bloquant.
+- *Convention plugins* — le pattern `buildSrc` + precompiled script plugins
+  de Gradle permet des conventions partagées que tous les projets héritent.
+  Mill n'a pas cette couche — tout est dans le `build.sc`, potentiellement
+  dupliqué.
+- *Langage du workspace* — le workspace entier parle Kotlin. Mill parle
+  Scala. Pour un pipeline qui parse les `build.gradle.kts` afin d'extraire
+  les dépendances et annoter le code, changer de langage de build c'est
+  perdre l'homogénéité du parsing.
+- *Version catalogs + dependency locking* — `libs.versions.toml` de Gradle
+  permet un versioning centralisé que `assembleLibrary` consomme comme
+  contrat de cohérence cross-projets. Mill n'a pas de catalog standardisé.
+- *Maturité JVM* — Gradle a 15+ ans de résolution de dépendances, de gestion
+  de conflits transitifs, de `resolutionStrategy`. Mill est plus jeune et
+  les edge cases sont moins couverts.
+
+*Le verdict :*
+
+Mill serait un excellent runtime agentique pour un workspace neuf,
+homogène Scala, sans contrainte de plugin Gradle existant. Son build
+comme code + graphe réflexif + modules comme valeurs constituent une
+fondation plus *pure* conceptuellement que Gradle.
+
+Mais ce workspace n'est pas neuf. C'est 150+ sessions, 5 plugins publiés
+sur le Portal, 31 `build.gradle.kts`, un écosystème qui parle Kotlin DSL.
+Migrer vers Mill serait réécrire le capital fixe, pas l'augmenter.
+
+Gradle est le bon choix pour *ce* workspace à *ce* stade. Mill serait
+le bon choix pour une reconstruction from scratch avec les leçons
+apprises — ou comme runtime secondaire pour des projets Scala du
+workspace, consommé par le même pipeline via un adaptateur de build.
+
+===== L'exemple concret : millBakerPlugin
+
+Le portage du plugin bakery-gradle vers Mill (`/home/cheroliv/sources/draft/millBakerPlugin`)
+rend le verdict tangible. Il fait en 107 lignes de Scala ce que le
+plugin bakery-gradle fait en 400+ lignes de Kotlin + Gradle.
+
+La différence n'est pas cosmétique. Elle est structurale :
+
+*Les tâches sont des méthodes, pas des classes* ::
+`def publishSite(): Command[Unit] = Task.Command { ... }` — une seule
+méthode, pas un `DefaultTask` avec `@Input`, `@OutputFile`, `@TaskAction`.
+La tâche *est* son corps. Pas de classe séparée. Pas d'annotations.
+Pas de wiring manuel dans `apply()`.
+
+*Le graphe de dépendances est implicite* ::
+`publishSite` appelle `jbake()` → Mill résout automatiquement la
+dépendance. Pas de `dependsOn("jbake")`. Pas de risque d'oubli.
+Le DAG est le call graph — ce qui est exécuté est exactement ce qui
+est appelé, ni plus ni moins.
+
+*La configuration est une valeur immuable* ::
+```scala
+case class SiteConfiguration(
+    pushConfiguration: GitPushConfiguration,
+    cname: Option[String] = None  // pas null, pas Property<String>
+)
+```
+Pas de setters. Pas de `Property<T>`. Pas d'extension mutable.
+`Option[String]` au lieu de `null`. Égalité structurelle gratuite.
+`copy()` pour la dérivation. La configuration est une donnée, pas
+un objet mutable à hydrater.
+
+*La programmation fonctionnelle est native* ::
+`Option.orElse`, `foreach`, pattern matching, `Result.Success`/`Failure`
+— tout cela est le langage Scala, pas une bibliothèque ajoutée.
+Là où Kotlin a besoin d'Arrow pour approcher le même niveau
+d'expressivité (Either, IO, lenses), Mill parle FP comme langue
+maternelle.
+
+*Le build est un programme Scala* ::
+```scala
+import $ivy.`com.cheroliv::mill-baker::0.0.0-SNAPSHOT`
+object `package` extends RootModule with BakerModule { ... }
+```
+Le build.mill importe la dépendance du plugin comme n'importe quel
+programme Scala importe une bibliothèque. Pas de `plugins {}` block,
+pas de `apply false`, pas de `Gradle Plugin Portal`. C'est du code
+Scala standard avec une dépendance Maven Ivy.
+
+*Le ratio est parlant* ::
+
+| Métrique | millBakerPlugin | bakery-gradle |
+| Plugin source (lignes) | 107 | 400+ |
+| Build utilisateur (lignes) | 25 | 60-100 |
+| Fichiers de config | 5 (case classes) | 7-10 (classes + extensions + properties) |
+| Abstraction du build | Traits mixés à la compilation | Plugin class + service file + string ID |
+
+Ce n'est pas "Mill est meilleur que Gradle". C'est "Mill a été conçu
+pour que le build soit un programme fonctionnel, et ça se voit dans
+la concision du code". Gradle a été conçu pour que le build soit une
+configuration déclarative exécutée par un moteur impératif — et ça
+se voit dans le nombre de couches d'abstraction nécessaires.
+
+Pour le pipeline de contexte augmenté, ce que millBakerPlugin prouve
+c'est que si demain un projet Scala + Mill rejoint le workspace, le
+pipeline peut s'y adapter sans réécriture. Un `BakerModule` exposé
+comme trait est aussi requêtable qu'une tâche Gradle — il suffit d'un
+adaptateur qui lit les cibles Mill (`mill resolve _`, `mill show`)
+et les traduit dans le registre des tools de l'expert.
+
+==== Ce que Gradle pourrait encore donner au pipeline
+
+Au-delà des données déjà exposées, Gradle est extensible. Le pipeline peut
+créer des **extensions Gradle dédiées** que chaque projet du workspace
+déclare, et qui nourrissent directement le vecteur composite :
+
+[source,kotlin]
+----
+// Dans le build.gradle.kts de n'importe quel projet du workspace
+codex {
+    domain("kotlin-gradle-plugin") {
+        boundedContext("plugin-development") {
+            entity("Extension")
+            entity("Task")
+            entity("Configuration")
+        }
+        books {
+            reference("978-1-098-17675-4")  // Applied AI
+        }
+    }
+    bloomTarget.set(BloomLevel.CREATE)
+    rag {
+        zoneFilter.add(Zone.OSS)
+        zoneFilter.add(Zone.OFFICE)
+    }
+    antiPatterns {
+        avoid("ServiceLocator")
+        avoid("GodTask")  // tâche Gradle de 500+ lignes
+    }
+}
+----
+
+Cette extension n'est pas une couche supplémentaire — c'est le projet qui
+**se déclare au pipeline** dans le langage natif du build (Kotlin DSL).
+Le projet devient auto-descriptif. Le pipeline lit cette déclaration
+comme il lit un JSON LDD — sauf qu'elle est écrite par le développeur
+du projet, pas extraite d'un PDF.
+
+==== Gradle et la génération de code
+
+La question de fond : Gradle peut-il, par sa connaissance du build et de
+l'objet projet, apporter de l'information pertinente utilisable pour la
+génération de code ? La réponse est oui, et à plusieurs niveaux :
+
+*Niveau 1 — Le task graph comme plan d'exécution*
+Le Planning Expert produit des EPICs → User Stories → tâches Gradle. Mais
+le task graph Gradle *existant* peut aussi informer le Planning Expert :
+- « La tâche `compileKotlin` dépend de `generateSources`. Si tu ajoutes un
+  générateur de code, mets-le AVANT `compileKotlin` dans le DAG. »
+- « La tâche `test` dépend de `compileTestKotlin`. Ne génère pas de tests
+  sans les faire compiler. »
+- « `build` dépend de `check`. Si `check` est rouge, `build` ne sera jamais
+  vert. Priorise les tâches de vérification. »
+
+*Niveau 2 — Les source sets comme cibles de génération*
+Quand le pipeline génère du code (tests, endpoints, DTOs), il doit savoir
+*OÙ* écrire. Gradle le sait déjà :
+- `sourceSets.main.java.srcDirs` → code de production
+- `sourceSets.test.java.srcDirs` → tests
+- `sourceSets.main.resources.srcDirs` → configuration
+- `sourceSets.main.kotlin.srcDirs` (si Kotlin) vs `java` (si Java)
+
+Le générateur de code ne devine pas où écrire — il interroge le projet.
+
+*Niveau 3 — Les configurations comme contrat technique*
+Quand le pipeline suggère une dépendance, il peut vérifier qu'elle est
+compatible avec le reste du classpath. Gradle expose les configurations :
+- `compileClasspath` → ce que le code voit à la compilation
+- `runtimeClasspath` → ce qui est disponible à l'exécution
+- `annotationProcessor` → les processeurs d'annotations
+
+« Tu veux ajouter `resilience4j-circuitbreaker:2.3.0`. Cette version est
+compatible avec `spring-boot:3.4.1` déjà dans ton `compileClasspath`.
+Aucune exclusion nécessaire. »
+
+*Niveau 4 — Les conventions comme patterns architecturaux*
+Les conventions Gradle (`kotlin { jvmToolchain(21) }`, `java { sourceCompatibility = JavaVersion.VERSION_21 }`)
+révèlent les choix architecturaux :
+- « Projet JVM 21 → peut utiliser virtual threads, pattern matching, records »
+- « Plugin Gradle appliqué `kotlin("jvm")` → Kotlin, pas Java pur → générer
+  des data classes, pas des POJOs »
+- « Plugin `java-gradle-plugin` appliqué → le projet est un plugin Gradle →
+  respecter la convention `com.cheroliv.*` pour le plugin id »
+
+Le générateur de code ne produit pas du code générique — il produit du code
+adapté à la stack réelle du projet.
+
+*Niveau 5 — Le build scan comme profil de performance*
+« La tâche `compileKotlin` prend 45 secondes, cache hit à 12%. La tâche
+`test` prend 3 minutes, dont 2 minutes dans `PaymentServiceTest`.
+Suggestion : paralléliser `PaymentServiceTest` avec `@Execution(Concurrent)`
+ou extraire les tests lents en `integrationTest` source set. »
+
+Le Planning Expert ne priorise pas seulement sur la couverture Bloom —
+il priorise aussi sur la performance de build.
+
+==== La synthèse : Gradle comme runtime agentique
+
+Ce que tu as construit n'est pas "Gradle qui exécute des tâches pour un
+pipeline d'IA". C'est **Gradle comme runtime agentique natif** :
+
+- Chaque projet est un *agent* (il a une identité, des dépendances, un
+  comportement = ses tâches)
+- Le task graph est le *workflow* (un DAG navigable, exactement comme
+  LangGraph4j)
+- Les inputs/outputs sont les *contrats* (typés, validés, incrémentaux)
+- Les extensions/conventions sont l'*ADN* (configuration déclarative du
+  domaine)
+- Le dependency graph est le *contexte* (ce que l'agent sait du monde
+  extérieur)
+- Le build scan est la *mémoire* (ce qui s'est passé, combien de temps,
+  quels caches)
+
+Tu n'as pas besoin d'implémenter un protocole agentique. Gradle en est
+déjà un. Tu n'as pas besoin de LangGraph4j pour orchestrer des tâches —
+le task graph de Gradle est déjà un orchestrateur. La valeur de
+LangGraph4j, c'est d'ajouter ce que Gradle ne fait pas : le routage
+conditionnel par LLM, la pause/reprise avec checkpoints, et le
+self-reflection.
+
+==== Le principe
+
+> Gradle n'est pas un simple exécuteur de build — c'est la **conscience
+> du projet**. Il sait ce que le projet contient (source sets), de quoi
+> il dépend (resolved dependencies), comment il se configure (extensions),
+> ce qui doit être exécuté et dans quel ordre (task graph), et ce qui a
+> changé (incremental inputs/outputs).
+>
+> Aucun autre outil de build n'expose simultanément ces cinq dimensions.
+> Aucun autre outil n'aurait pu porter cette architecture avec la même
+> économie de moyens. Ce que le pipeline ajoute — extraction de corpus,
+> raisonnement, Bloom, fine-tuning — ne remplace pas Gradle : il
+> l'augmente. Le pipeline est la couche IA d'un runtime agentique dont
+> Gradle est déjà le moteur.
+
+=== La Séparation des Concerns — Pourquoi Codex Ne Peut Pas Tout Contenir
+
+==== Le diagnostic
+
+Ce que le document décrit ne peut pas vivre dans un seul dossier `codex-gradle/`.
+Lui imposer cette contrainte serait violer la séparation des concerns que le
+pipeline lui-même a fait émerger. Les couches décrites couvrent au moins cinq
+bounded contexts distincts, chacun avec ses propres tâches, son propre cycle
+de vie, et sa propre responsabilité.
+
+==== Cartographie des concerns
+
+[cols="1,2,3,2", options="header"]
+|===
+| Concern | Bounded context | Où physiquement | Pourquoi
+| **Acquisition documentaire** | Extraction PDF/EPUB → AsciiDoc → JSON LDD →
+chunk → vectorisation → Bloom | `foundry/codex-gradle/` | C'est le point
+d'entrée — le document entre dans le système par codex. Bloom est une
+opération sur le texte extrait, naturellement ici.
+| **Enrichissement croisé** | JSON LDD + RAG + Graphify → pointeurs
+bidirectionnels | `foundry/codex-gradle/` (via `enrichJsonLdd`) | Encore
+dans le pipeline d'acquisition : c'est un croisement de l'artefact extrait
+avec les infrastructures existantes.
+| **Bibliothèque systémique** | Agrégation cross-books, 5 critères, relations
+émergentes, `assembleLibrary`, JSON LDD bibliothèque | `foundry/library-gradle/`
+(nouveau) | Ce n'est pas de l'acquisition — c'est de l'agrégation
+cross-corpus. Produit distinct, consommable par engine/, indépendant de codex.
+| **Couches Code** | `annotateCodeSources`, `computeDelta`, `diagnoseFailure`,
+`acquireDependencyDocs` | `foundry/codebase-gradle/` (existant, à étendre) |
+L'analyse de code, le delta, et le parsing de dépendances sont dans le
+périmètre de codebase-gradle (déjà spécifié comme pipeline R&D anonymisation +
+LLM benchmarking). `acquireDependencyDocs` parse les `build.gradle.kts` —
+opération de build, pas d'acquisition documentaire.
+| **Outils de raisonnement** | `reason` — 21 modes, ALGO/HYBRIDE/PROMPT |
+`foundry/engine/` (existant) ou `foundry/reasoning-gradle/` (nouveau) | Couche
+transverse qui consomme TOUTES les autres. Dans engine/ = hub N3 naturel.
+Plugin séparé = tool consommable par engine/. Les deux sont cohérents.
+| **LLM Trainer** | `assembleTrainingDataset`, `distillDataset`, `deployExpert`,
+`createExpertRagStore`, `validateModel`, `retrainExpert` | `foundry/trainer-gradle/`
+(nouveau) | Le plus évident — le Trainer est un produit à part entière.
+Il consomme codex + library + engine. Il produit des experts déployables.
+| **Extension DSL `codex {}`** | Contrat déclaratif que chaque projet signe |
+BuildSrc / convention plugin dans chaque projet, ou `foundry/codex-conventions-gradle/`
+(nouveau) | C'est un contrat, pas une tâche. Soit dans un convention plugin
+appliqué par tous les projets, soit dans un plugin dédié importé.
+|===
+
+==== Cartographie physique du workspace après séparation
+
+[source]
+----
+foundry/
+  codex-gradle/                ← acquisition documentaire
+    codex-pdf/                   (PDF → AsciiDoc → JSON LDD)
+    codex-epub/                  (EPUB → AsciiDoc → JSON LDD)
+    enrichJsonLdd                (croisement RAG + Graphify)
+    classifyBloom                (classification Bloom par section)
+
+  library-gradle/              ← bibliothèque systémique cross-books
+    assembleLibrary              (agrégation N livres → relations cross-book)
+    critères : chunk, node, ontology, text, bloom_crossbook
+
+  codebase-gradle/             ← analyse de code (existant, à étendre)
+    annotateCodeSources          (@ConceptSource auto)
+    computeDelta                 (git diff → contexte)
+    diagnoseFailure              (stacktrace → anti-pattern)
+    acquireDependencyDocs        (build.gradle.kts → doc des libs)
+
+  trainer-gradle/              ← LLM Trainer : fabrique les experts
+    assembleTrainingDataset
+    distillDataset
+    exportTrainingFormat
+    validateModel
+    deployExpert / createExpert*
+    retrainExpert / retireExpert
+
+  engine/                      ← orchestration N3
+    assembleCompositeContext     (vecteur composite complet)
+    reason                       (outils de raisonnement, ou plugin séparé)
+    auditAugmentationCoverage    (couverture contextuelle globale)
+
+  codex-conventions-gradle/    ← extension DSL codex {} partagée
+----
+
+==== Le principe de la séparation
+
+> Codex est le point d'entrée — le document entre dans le système par
+> codex. Mais tout ce qui est aval — agréger, raisonner, entraîner,
+> auditer — mérite son propre dossier, son propre cycle de vie, sa propre
+> gouvernance agent. La séparation n'est pas cosmétique : elle reflète
+> les bounded contexts que le pipeline a lui-même fait émerger.
+>
+> Chaque dossier est un plugin Gradle au sens du DAG du workspace :
+> publié indépendamment, versionné indépendamment, gouverné par son
+> propre `.agents/`, et consommé par `engine/` comme une dépendance
+> Maven standard. C'est le même pattern que plantuml-gradle →
+> graphify-gradle → engine/ — appliqué à tout l'écosystème de
+> connaissance.
+
 == Synthèse — Le Cinquième Document du Jardin Secret
 
 Ce document est le **cinquième document du jardin secret**, complétant :
@@ -2076,6 +4583,6 @@ implicite, opérationnel par fragments. Il manquait juste d'être nommé.
 Maintenant il l'est.
 
 [.text-right]
-*Document rédigé le 6 mai 2026 — Session dialectique sur l'essence du produit.*
-*Cinquième document du jardin secret.*
-*Produit de la discussion avec opencode (deepseek-v4-pro) sur la redéfinition du MVP0.*
+*Document initié le 6 mai 2026 — enrichi le 7 mai 2026.*
+*Session dialectique complète : définition du MVP0 fondamental, structuration relationnelle du corpus (JSON LDD → SQL LMD), enrichissement croisé (RAG + Graphify), bibliothèque systémique cross-books (5 critères), taxonomie de Bloom, couches d'augmentation Code/Delta/Erreurs/Dépendances, outils de raisonnement (21 modes), LLM Trainer et modèle canonique de l'expert, Gradle comme conscience du projet, comparaison Mill, séparation des concerns en 7 bounded contexts.*
+*Cinquième document du jardin secret — 4615 lignes.*

@@ -1,0 +1,25 @@
+= Session 002 — Séparation des Concerns & Bouclage
+
+*Date* : 2026-05-07
+*Type* : design (clôture)
+*Modèle* : deepseek-v4-pro (via opencode)
+
+*Objectif* :
+- Identifier les bounded contexts du pipeline et leur séparation physique
+- Boucler la session dialectique du 6-7 mai 2026
+- Consigner la cartographie finale du workspace post-migration
+
+*Livrables* :
+- Section "Séparation des Concerns" dans AUGMENTED_CONTEXT_PIPELINE.adoc
+- Cartographie physique : codex-gradle, library-gradle, codebase-gradle (étendu), trainer-gradle, engine, codex-conventions-gradle
+- Analyse comparative Mill : millBakerPlugin (107 lignes) vs bakery-gradle (400+ lignes)
+- Gradle comme conscience du projet : 7 sources de données natives + 5 niveaux de génération de code
+- Mise à jour de la conclusion du document (4615 lignes)
+
+*Décisions clés* :
+- Codex ne peut pas tout contenir — 5 bounded contexts distincts émergent
+- library-gradle, trainer-gradle, codex-conventions-gradle = nouveaux dossiers à créer
+- codebase-gradle absorbe les couches Code (annotate, delta, diagnose, deps)
+- reasoning peut vivre dans engine/ ou en plugin séparé
+- Mill est validé comme runtime alternatif pour des projets Scala, mais Gradle reste le capital fixe
+- La séparation respecte le pattern existant : chaque dossier = plugin indépendant → publishToMavenLocal → engine/
