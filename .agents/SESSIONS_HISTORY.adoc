@@ -105,4 +105,6 @@ Historique des sessions de developpement du plugin codex-gradle.
 - Le vrai MVP n'est pas Edster — c'est la boucle auto-accélératrice contexte → vibecoding → plugin → contexte
 - La première cible est l'écriture des plugins et du SaaS, pas la génération de formations
 - Premier jalon : 5 tâches, 1 dossier, 1 livre. Quand ça tourne, le vibecoding passe sous testostérone
+- Livre Applied AI choisi stratégiquement : c'est le manuel de construction du moteur
+- LangChain4j + LangGraph4j = le capital fixe qui permet au pipeline de s'écrire lui-même
 - Tout le reste (library, trainer, reason, Bloom) = raffinement utile mais pas bloquant

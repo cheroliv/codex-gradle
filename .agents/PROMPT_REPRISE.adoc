@@ -1,22 +1,24 @@
 = PROMPT_REPRISE — codex-gradle
 
 '''
-== Resume de la derniere session (Session 003 — 2026-05-07 — Priorisation)
+== Resume de la derniere session (Session 003 — 2026-05-07 — Priorisation/Bouclage)
 
-*Objectif* : Identifier le vrai MVP : la boucle d'autonomie pour le vibecoding.
+*Objectif* : Identifier le vrai MVP + justifier le choix stratégique du livre Applied AI.
 
 *Ce qui a ete fait* :
-- Ajout de la section "Le Vrai MVP — La Boucle d'Autonomie pour le Vibecoding"
-  dans AUGMENTED_CONTEXT_PIPELINE.adoc
-- Premier jalon concret défini : codex-pdf extrait Applied AI → JSON LDD → pgvector
-  → assembleCompositeContext → opencode lit le contexte augmenté
-- Priorité réaffirmée : plugins et SaaS d'abord, formations ensuite
+- Section "Le Vrai MVP" + section "Pourquoi le livre Applied AI" dans AUGMENTED_CONTEXT_PIPELINE.adoc
+- Premier jalon concret : codex-pdf extrait Applied AI → JSON LDD → pgvector → opencode
+- Justification du choix du livre : LangChain4j + LangGraph4j = manuel de construction du moteur
+- Document final à ~4770 lignes
+- 3 sessions documentées (001 design, 002 concerns, 003 priorisation)
+- Gouvernance agent à jour (PROMPT_REPRISE, INDEX, SESSIONS_HISTORY)
 
 *Prochaine étape* : CDX-1a — Implémenter `extractBookStructure` (PDFBox + PDFStreamEngine → AsciiDoc structuré)
+sur le livre Applied AI for Enterprise Java Development
 
 *Fichiers critiques a charger en EAGER* :
 - `AGENT.adoc`
-- `AUGMENTED_CONTEXT_PIPELINE.adoc` — le document complet
+- `AUGMENTED_CONTEXT_PIPELINE.adoc` — le document complet (~4770 lignes)
 
 *Codebases de reference LAZY* :
 - `foundry/jhipster-gradle-plugins/` (pattern parent)
