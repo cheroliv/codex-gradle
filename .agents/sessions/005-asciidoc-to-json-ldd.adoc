@@ -1,0 +1,29 @@
+= Session 005 — CDX-1b : asciiDocToJsonLdd via AsciidoctorJ
+
+*Date* : 2026-05-09
+*Type* : implementation
+*Modèle* : deepseek-v4-pro (via opencode)
+*Score* : —
+
+== Objectif
+
+Implémenter CDX-1b : parser un `.adoc` structuré → JSON LDD via l'AST AsciidoctorJ
+(remplace le parsing regex `^(=+)\s+(.+)` maison initial).
+
+== Livrables
+
+- `AsciiDocToJsonLddTask.kt` — refactoré : utilise `Asciidoctor.Factory.create()`, traverse
+  l'AST (`Section`/`Block`) au lieu du regex.
+- Suppression du `companion object` avec `SECTION_REGEX` — plus de parsing texte ligne à ligne.
+- Task `asciiDocToJsonLdd` enregistrée dans les conventions, groupe `codex`.
+- Dépendance `org.asciidoctor:asciidoctorj:3.0.0` déjà présente dans `buildSrc/build.gradle.kts`.
+
+== État
+
+✅ Compile OK — `./gradlew :doc-pipeline:compileKotlin` BUIL SUCCESSFUL.
+Le JSON LDD produit est la structure hiérarchique de base (title/level/children/paragraphs),
+conformément à la spec CDX-1b (entités/code_blocks/cross_references → CDX-4 enrichJsonLdd).
+
+== Prochaine étape
+
+CDX-1c — `importBookSql` : JSON LDD → DDL + INSERT PostgreSQL.

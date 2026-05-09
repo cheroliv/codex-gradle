@@ -1,3 +1,4 @@
+import dev.cheroliv.codex.tasks.AsciiDocToJsonLddTask
 import dev.cheroliv.codex.tasks.ExtractBookStructureTask
 import dev.cheroliv.codex.tasks.ExtractTextTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -33,33 +34,35 @@ repositories {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
-    testLogging {
-        events("FAILED", "SKIPPED")
-    }
+    testLogging { events("FAILED", "SKIPPED") }
 }
 
-val CODEX_GROUP = "codex"
-
 tasks.register("extractText", ExtractTextTask::class.java) {
-    group = CODEX_GROUP
+    group = "codex"
     description = "Extrait le texte brut structuré d'un PDF avec métadonnées typographiques"
-    pdfFile = project.propertyOrNull("pdfFile")?.toString()?.let { project.layout.projectDirectory.file(it) }
-        ?: project.objects.fileProperty().also { it.set(project.providers.gradleProperty("pdfFile")) }
-    outputFile = project.propertyOrNull("outputFile")?.toString()?.let { project.layout.projectDirectory.file(it) }
-        ?: project.objects.fileProperty().also { it.set(project.providers.gradleProperty("outputFile")) }
+    if (project.hasProperty("pdfFile"))
+        pdfFile.set(project.file(project.property("pdfFile") as String))
+    if (project.hasProperty("outputFile"))
+        outputFile.set(project.file(project.property("outputFile") as String))
 }
 
 tasks.register("extractBookStructure", ExtractBookStructureTask::class.java) {
-    group = CODEX_GROUP
+    group = "codex"
     description = "Extrait la structure d'un PDF (titres, sections) et produit un .adoc hiérarchique"
-    val pdf = project.propertyOrNull("pdfFile")?.toString()
-    val out = project.propertyOrNull("outputFile")?.toString()
-    if (pdf != null) pdfFile.set(project.file(pdf))
-    if (out != null) outputFile.set(project.file(out))
+    if (project.hasProperty("pdfFile"))
+        pdfFile.set(project.file(project.property("pdfFile") as String))
+    if (project.hasProperty("outputFile"))
+        outputFile.set(project.file(project.property("outputFile") as String))
 }
 
-fun Project.propertyOrNull(name: String): Any? =
-    if (hasProperty(name)) property(name) else null
+tasks.register("asciiDocToJsonLdd", AsciiDocToJsonLddTask::class.java) {
+    group = "codex"
+    description = "Parse un .adoc via AsciidoctorJ → JSON LDD structuré"
+    if (project.hasProperty("adocFile"))
+        adocFile.set(project.file(project.property("adocFile") as String))
+    if (project.hasProperty("jsonFile"))
+        jsonFile.set(project.file(project.property("jsonFile") as String))
+}
 
 publishing {
     repositories {

@@ -4,36 +4,29 @@ import org.apache.pdfbox.Loader
 import org.apache.pdfbox.text.PDFTextStripper
 import org.apache.pdfbox.text.TextPosition
 import org.gradle.api.DefaultTask
-import org.gradle.api.tasks.Input
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
-import org.gradle.api.tasks.options.Option
 import java.io.File
 
 abstract class ExtractBookStructureTask : DefaultTask() {
 
     @get:InputFile
-    @get:Optional
-    @set:Option(option = "pdf-file", description = "Chemin du fichier PDF source")
-    @set:Input
-    var pdfFile: File? = null
+    abstract val pdfFile: RegularFileProperty
 
     @get:OutputFile
-    @get:Optional
-    @set:Option(option = "output-file", description = "Chemin du fichier .adoc de sortie")
-    @set:Input
-    var outputFile: File? = null
+    abstract val outputFile: RegularFileProperty
 
     @TaskAction
     fun extract() {
-        val input = pdfFile ?: error("PDF source non défini (--pdf-file)")
-        val output = outputFile ?: error("Fichier de sortie non défini (--output-file)")
+        val input = pdfFile.asFile.get()
+        val output = outputFile.asFile.get()
 
         logger.lifecycle("[codex] extractBookStructure : ${input.name} → ${output.name}")
 
-        val adocContent = buildAsciiDoc(input)
+        val lines = extractLines(input)
+        val adocContent = buildAsciiDoc(lines)
 
         output.writeText(adocContent)
         logger.lifecycle(
@@ -41,168 +34,125 @@ abstract class ExtractBookStructureTask : DefaultTask() {
         )
     }
 
-    private fun buildAsciiDoc(pdfFile: File): String {
-        val textPositions = extractTextPositions(pdfFile)
-
-        if (textPositions.isEmpty()) return "= [Document vide]\n\n"
-
-        val sizes = textPositions.map { it.fontSize }
-        val avg = sizes.average()
-        val max = sizes.maxOrNull() ?: avg
-        val fontSizeStats = FontSizeStats(avg = avg, max = max)
-
-        val positionedLines = groupTextPositionsByY(textPositions)
-
-        val chapterThreshold =
-            fontSizeStats.avg + (fontSizeStats.max - fontSizeStats.avg) * 0.6
-        val sectionThreshold =
-            fontSizeStats.avg + (fontSizeStats.max - fontSizeStats.avg) * 0.15
-
-        logger.lifecycle(
-            "[codex] Fontes: avg=%.1f, max=%.1f, chapter>=%.1f, section>=%.1f".format(
-                fontSizeStats.avg, fontSizeStats.max, chapterThreshold, sectionThreshold
-            )
-        )
-
-        return buildAsciiDocFromGroups(positionedLines, chapterThreshold, sectionThreshold)
-    }
-
-    private fun extractTextPositions(pdfFile: File): List<PositionedLine> {
+    private fun extractLines(pdfFile: File): List<StructuredLine> {
         Loader.loadPDF(pdfFile).use { document ->
-            val allPositions = mutableListOf<PositionedLine>()
+            val allLines = mutableListOf<StructuredLine>()
 
             for (pageIndex in 0 until document.numberOfPages) {
+                val linesForPage = mutableListOf<StructuredLine>()
+
                 val stripper = object : PDFTextStripper() {
-                    val positions = mutableListOf<PositionedLine>()
 
-                    override fun processTextPosition(text: TextPosition) {
-                        val unicode = text.unicode
-                        if (unicode.isBlank()) return
-
-                        positions.add(
-                            PositionedLine(
-                                x = text.xDirAdj.toDouble(),
-                                y = text.yDirAdj.toDouble(),
-                                fontSize = text.fontSizeInPt.toDouble(),
-                                text = unicode,
-                                fontName = text.font.name
-                            )
-                        )
-                        super.processTextPosition(text)
-                    }
-
-                    override fun getText(document: org.apache.pdfbox.pdmodel.PDDocument): String {
+                    init {
                         sortByPosition = true
                         lineSeparator = "\n"
                         startPage = pageIndex + 1
                         endPage = pageIndex + 1
-                        return super.getText(document)
+                    }
+
+                    override fun writeString(text: String, textPositions: List<TextPosition>) {
+                        if (text.isBlank()) return
+
+                        val y = textPositions.firstOrNull()?.yDirAdj?.toDouble() ?: 0.0
+                        val startX = textPositions.firstOrNull()?.xDirAdj?.toDouble() ?: 0.0
+
+                        val maxFontSize = textPositions.maxOfOrNull {
+                            it.fontSizeInPt.toDouble()
+                        } ?: 0.0
+
+                        val fontName = textPositions.firstOrNull()?.font?.name
+
+                        linesForPage.add(
+                            StructuredLine(
+                                page = pageIndex + 1,
+                                y = y,
+                                x = startX,
+                                fontSize = maxFontSize,
+                                text = text.replace("\\s+".toRegex(), " ").trim(),
+                                fontName = fontName
+                            )
+                        )
                     }
                 }
 
                 stripper.getText(document)
-                allPositions.addAll(stripper.positions)
+                allLines.addAll(linesForPage)
 
-                if (document.numberOfPages <= 50 ||
-                    (pageIndex + 1) % 20 == 0 ||
-                    pageIndex == 0 ||
-                    pageIndex == document.numberOfPages - 1
+                if (document.numberOfPages <= 50 || pageIndex == 0 ||
+                    pageIndex == document.numberOfPages - 1 ||
+                    (pageIndex + 1) % 20 == 0
                 ) {
                     logger.lifecycle(
                         "[codex] Page ${pageIndex + 1}/${document.numberOfPages}: " +
-                            "${stripper.positions.size} fragments texte"
+                            "${linesForPage.size} lignes"
                     )
                 }
             }
 
-            return allPositions
+            return allLines
         }
     }
 
-    private fun groupTextPositionsByY(positions: List<PositionedLine>): List<LineGroup> {
-        if (positions.isEmpty()) return emptyList()
+    private fun buildAsciiDoc(lines: List<StructuredLine>): String {
+        if (lines.isEmpty()) return "= [Document vide]\n\n"
 
-        val yTolerance = 3.0
-        val sortedPositions = positions.sortedByDescending { it.y }
+        val sizes = lines.map { it.fontSize }
+        val avg = sizes.average()
+        val max = sizes.maxOrNull() ?: avg
+        val range = max - avg
 
-        val yGroups = mutableListOf<MutableList<PositionedLine>>()
+        val headerThreshold = if (range > 0) avg + range * 0.25 else avg + 1.0
+        val subHeaderThreshold = if (range > 0) avg + range * 0.10 else avg
 
-        for (pos in sortedPositions) {
-            val lastGroup = yGroups.lastOrNull()
-            if (lastGroup != null &&
-                kotlin.math.abs(lastGroup.last().y - pos.y) <= yTolerance
-            ) {
-                lastGroup.add(pos)
-            } else {
-                yGroups.add(mutableListOf(pos))
-            }
-        }
-
-        return yGroups.map { group ->
-            val sortedByX = group.sortedBy { it.x }
-
-            val lineText = buildString {
-                for (i in sortedByX.indices) {
-                    val current = sortedByX[i]
-                    append(current.text)
-                    if (i + 1 < sortedByX.size) {
-                        val next = sortedByX[i + 1]
-                        val currentEndX = current.x + current.text.length * current.fontSize * 0.45
-                        val gap = next.x - currentEndX
-                        val spaceThreshold = current.fontSize * 0.2
-                        if (gap > spaceThreshold) append(' ')
-                    }
-                }
-            }
-
-            val cleanedText = cleanText(lineText)
-            val maxFontSize = group.maxOf { it.fontSize }
-            LineGroup(
-                y = group.first().y,
-                x = group.first().x,
-                text = cleanedText,
-                maxFontSize = maxFontSize
+        logger.lifecycle(
+            "[codex] Fontes: avg=%.1f, max=%.1f, header>=%.1f, sub>=%.1f".format(
+                avg, max, headerThreshold, subHeaderThreshold
             )
-        }.filter { it.text.isNotBlank() }
-    }
+        )
 
-    private fun cleanText(text: String): String =
-        text.replace(Regex("\\s+"), " ").trim()
-
-    private fun buildAsciiDocFromGroups(
-        groups: List<LineGroup>,
-        chapterThreshold: Double,
-        sectionThreshold: Double
-    ): String {
         val sb = StringBuilder()
-
         sb.appendLine("= Structure extraite du PDF")
         sb.appendLine()
-
         sb.appendLine("[NOTE]")
         sb.appendLine("====")
-        sb.appendLine(
-            "Généré automatiquement par extractBookStructure. " +
-                "Hiérarchie basée sur heuristique typographique."
-        )
+        sb.appendLine("Généré automatiquement par extractBookStructure. Hiérarchie basée sur heuristique typographique.")
         sb.appendLine("====")
         sb.appendLine()
 
-        for (group in groups) {
+        var pendingBlanks = 0
+
+        for (line in lines) {
+            val fontSize = line.fontSize
+            val text = line.text
+
+            if (text.isBlank()) {
+                pendingBlanks++
+                continue
+            }
+
+            val isHeader = fontSize >= headerThreshold
+            val isSubHeader = fontSize >= subHeaderThreshold && !isHeader
+
+            if (pendingBlanks > 0) {
+                sb.appendLine()
+                pendingBlanks = 0
+            }
+
             when {
-                group.maxFontSize >= chapterThreshold -> {
+                isHeader -> {
                     sb.appendLine()
-                    sb.appendLine("== " + group.text)
+                    sb.appendLine("== $text")
                     sb.appendLine()
+                    pendingBlanks = 0
                 }
-                group.maxFontSize >= sectionThreshold -> {
+                isSubHeader -> {
                     sb.appendLine()
-                    sb.appendLine("=== " + group.text)
+                    sb.appendLine("=== $text")
                     sb.appendLine()
+                    pendingBlanks = 0
                 }
                 else -> {
-                    sb.appendLine(group.text)
-                    sb.appendLine()
+                    sb.appendLine(text)
                 }
             }
         }
@@ -210,23 +160,12 @@ abstract class ExtractBookStructureTask : DefaultTask() {
         return sb.toString()
     }
 
-    data class PositionedLine(
-        val x: Double,
+    data class StructuredLine(
+        val page: Int,
         val y: Double,
+        val x: Double,
         val fontSize: Double,
         val text: String,
         val fontName: String? = null
-    )
-
-    data class LineGroup(
-        val y: Double,
-        val x: Double,
-        val text: String,
-        val maxFontSize: Double
-    )
-
-    private data class FontSizeStats(
-        val avg: Double,
-        val max: Double
     )
 }

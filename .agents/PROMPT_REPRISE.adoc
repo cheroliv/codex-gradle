@@ -1,33 +1,29 @@
 = PROMPT_REPRISE — codex-gradle
 
 '''
-== Session 004 — Migration chemins OSS/CSS (inter-session chore)
+== Session 005 — CDX-1b : asciiDocToJsonLdd via AsciidoctorJ AST
 
-*Date* : 2026-05-07 | *Type* : chore
-*Resultat* : ✅ INDEX.adoc — remplacement `foundry/` → `foundry/OSS/` pour granularisation OSS/CSS.
-Commit + push.
+*Date* : 2026-05-09 | *Type* : implementation
+*Résultat* : ✅ AsciiDocToJsonLddTask utilise AsciidoctorJ AST (plus de parsing regex maison).
+Build compile OK.
 
 '''
-== Resume de la derniere session (Session 003 — 2026-05-07 — Priorisation/Bouclage)
+== Résumé de la dernière session (Session 005 — 2026-05-09)
 
-*Objectif* : Identifier le vrai MVP + justifier le choix stratégique du livre Applied AI.
+*Ce qui a été fait* :
+- `AsciiDocToJsonLddTask.kt` refactoré : `Asciidoctor.Factory.create()`, traverse
+  AST (`Section`/`Block`) pour construire hiérarchie title/level/children/paragraphs.
+- JSON LDD structural fonctionnel — entités/code_blocks/cross_references → CDX-4.
+- Build compile OK.
 
-*Ce qui a ete fait* :
-- Section "Le Vrai MVP" + section "Pourquoi le livre Applied AI" dans AUGMENTED_CONTEXT_PIPELINE.adoc
-- Premier jalon concret : codex-pdf extrait Applied AI → JSON LDD → pgvector → opencode
-- Justification du choix du livre : LangChain4j + LangGraph4j = manuel de construction du moteur
-- Document final à ~4770 lignes
-- 3 sessions documentées (001 design, 002 concerns, 003 priorisation)
-- Gouvernance agent à jour (PROMPT_REPRISE, INDEX, SESSIONS_HISTORY)
+*État des EPICs terminés* : CDX-0 (bootstrap), CDX-1a (extractBookStructure PDFBox)
 
-*Prochaine étape* : CDX-1a — Implémenter `extractBookStructure` (PDFBox + PDFStreamEngine → AsciiDoc structuré)
-sur le livre Applied AI for Enterprise Java Development
+*Prochaine étape* : CDX-1c — `importBookSql` : JSON LDD → DDL + INSERT PostgreSQL
 
-*Fichiers critiques a charger en EAGER* :
+*Fichiers critiques à charger en EAGER* :
 - `AGENT.adoc`
-- `AUGMENTED_CONTEXT_PIPELINE.adoc` — le document complet (~4770 lignes)
+- `AUGMENTED_CONTEXT_PIPELINE.adoc` — spec canonique
 
-*Codebases de reference LAZY* :
-- `foundry/jhipster-gradle-plugins/` (pattern parent)
-- `foundry/engine/` (hub N3)
+*Codebases de référence LAZY* :
+- `foundry/OSS/engine/` (hub N3)
 - `office/books-collection/` (source PDFs)

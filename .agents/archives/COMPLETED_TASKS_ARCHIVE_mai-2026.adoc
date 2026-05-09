@@ -1,0 +1,11 @@
+= COMPLETED_TASKS_ARCHIVE — Mai 2026
+
+'''
+== CDX-1b — asciiDocToJsonLdd (2026-05-09)
+
+*Session* : 005
+*Type* : implementation
+*Détail* : Refactoring AsciiDocToJsonLddTask — remplacement parsing regex ligne à ligne
+par traversée de l'AST AsciidoctorJ (`Asciidoctor.Factory.create()` + `Section`/`Block`).
+*Livrables* : `AsciiDocToJsonLddTask.kt` (160 lignes), `005-asciidoc-to-json-ldd.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` BUIL SUCCESSFUL.

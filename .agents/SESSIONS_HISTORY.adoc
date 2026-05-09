@@ -127,3 +127,19 @@ Historique des sessions de developpement du plugin codex-gradle.
 - INDEX.adoc mis a jour
 - PROMPT_REPRISE.adoc mis a jour
 - SESSIONS_HISTORY.adoc : entree session 004
+
+'''
+== Session 005 — CDX-1b : asciiDocToJsonLdd via AsciidoctorJ AST
+
+*Date* : 2026-05-09
+*Type* : implementation
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : —
+
+*Objectif* :
+- Remplacer le parsing regex maison par l'AST AsciidoctorJ dans AsciiDocToJsonLddTask
+
+*Livrables* :
+- `AsciiDocToJsonLddTask.kt` refactore : Asciidoctor.Factory.create(), traverse AST (Section/Block)
+- Build compile OK
+- Rapport session 005
