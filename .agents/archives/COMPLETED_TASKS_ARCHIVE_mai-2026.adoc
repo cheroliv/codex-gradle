@@ -9,3 +9,16 @@
 par traversée de l'AST AsciidoctorJ (`Asciidoctor.Factory.create()` + `Section`/`Block`).
 *Livrables* : `AsciiDocToJsonLddTask.kt` (160 lignes), `005-asciidoc-to-json-ldd.adoc` (rapport).
 *Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` BUIL SUCCESSFUL.
+
+''''
+== CDX-1c — importBookSql (2026-05-10)
+
+*Session* : 006
+*Type* : implementation
+*Détail* : Création ImportBookSqlTask (268 lignes) — parser JSON récursif maison
++ générateur DDL CREATE TABLE + INSERT PostgreSQL avec hiérarchie parent_id.
+DocNode extrait en top-level, tâche importBookSql enregistrée groupe codex.
+Test bout en bout : test-book.adoc → JSON LDD → SQL (IDs séquentiels, FK cohérentes).
+*Livrables* : `ImportBookSqlTask.kt`, `AsciiDocToJsonLddTask.kt` (DocNode top-level),
+`codex.gradle-plugin-conventions.gradle.kts` (nouvelle tâche), `006-import-book-sql.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` BUILD SUCCESSFUL. 4 tâches codex.

@@ -1,0 +1,48 @@
+= Session 006 — CDX-1c : importBookSql (JSON LDD → DDL + INSERT PostgreSQL)
+:type: implementation
+:date: 2026-05-10
+:modele: deepseek-v4-pro (via opencode)
+:score: —
+
+== Objectif
+
+JSON LDD (produit par CDX-1b) → DDL + INSERT PostgreSQL → corpus requêtable en SQL LMD.
+
+== Livrables
+
+- `ImportBookSqlTask.kt` (268 lignes) créé dans `buildSrc/src/main/kotlin/dev/cheroliv/codex/tasks/`
+  - Parser JSON récursif sans dépendance externe (zéro kotlinx-serialization ou jackson)
+  - Génération DDL CREATE TABLE : `book`, `documents`, `paragraphs`
+  - Génération INSERT statements avec hiérarchie `parent_id` cohérente
+  - IDs séquentiels globaux (correction de bug compteur réinitialisé entre roots)
+- `DocNode` extrait en top-level dans `AsciiDocToJsonLddTask.kt` pour réutilisation
+- Convention plugin `codex.gradle-plugin-conventions.gradle.kts` : nouvelle tâche `importBookSql` groupe `codex`
+- Tâche `importBookSql` visible dans `./gradlew tasks --group codex`
+
+== Test bout en bout
+
+```
+test-book.adoc (2 chapitres, 4 sections, 5 paragraphes)
+  → asciiDocToJsonLdd → test-book.json (1424 octets)
+  → importBookSql → test-book.sql (2375 octets)
+```
+
+SQL validé : hiérarchie `book → documents (parent_id) → paragraphs (doc_id)`, IDs séquentiels continus (1→6 docs, 1→6 paras).
+
+== Problèmes rencontrés
+
+- Bug compteur de doc réinitialisé entre les roots → correction en passant `Pair<Int, Int>` en retour de `traverseForInsert`
+- Split-brain buildSrc/doc-pipeline persistant (non corrigé — hors scope CDX-1c)
+
+== Build
+
+```
+./gradlew :doc-pipeline:compileKotlin → BUILD SUCCESSFUL
+./gradlew buildSrc:compileKotlin → BUILD SUCCESSFUL
+./gradlew tasks --group codex → 4 tâches affichées
+```
+
+== Décisions
+
+- Parser JSON maison plutôt que kotlinx-serialization : le JSON LDD actuel est basé sur `DocNode` simple, pas le modèle Book/Part/Chapter/Section complet du AUGMENTED_CONTEXT_PIPELINE spec. Le parser maison est suffisant.
+- Pas d'exécution JDBC directe (optionnel dans le PROMPT_REPRISE) — le fichier SQL est autonome, exécutable via `psql -f`.

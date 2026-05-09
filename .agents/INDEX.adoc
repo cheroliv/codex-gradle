@@ -5,9 +5,9 @@ _Regles absolues_ : voir `AGENT.adoc`
 _Ontologie spatiale_ : voir `configuration/.agents/AGENT_GOVERNANCE.adoc`
 _DAG_ : N2 — Plugin Gradle d'acquisition de documents (Regle 4bis)
 
-_Derniere mise a jour_ : 2026-05-09
-_Session en cours_ : 005 — CDX-1b : asciiDocToJsonLdd via AsciidoctorJ AST
-_Session precedente_ : 004 (chore migration chemins foundry/ → foundry/OSS/)
+_Derniere mise a jour_ : 2026-05-10
+_Session en cours_ : 007 — CDX-2 : détection typographique → hiérarchie de titres
+_Session precedente_ : 006 ✅ (CDX-1c importBookSql TERMINÉ)
 
 '''
 == REGLES ABSOLUES (resume)
@@ -30,6 +30,7 @@ _Session precedente_ : 004 (chore migration chemins foundry/ → foundry/OSS/)
 | 003 | 2026-05-07 | design | Le Vrai MVP : Boucle d'Autonomie | —
 | 004 | 2026-05-07 | chore | Migration chemins foundry/ → foundry/OSS/ (granularisation OSS/CSS) | —
 | 005 | 2026-05-09 | impl | CDX-1b asciiDocToJsonLdd via AsciidoctorJ AST | —
+| 006 | 2026-05-10 | impl | CDX-1c importBookSql — JSON LDD → DDL + INSERT PostgreSQL | —
 |===
 
 '''
@@ -40,7 +41,7 @@ _Session precedente_ : 004 (chore migration chemins foundry/ → foundry/OSS/)
 | CDX-0 | Bootstrap gouvernance agent codex | ✅ TERMINE | P0
 | CDX-1a | Task `extractBookStructure` — PDFBox PDFStreamEngine → AsciiDoc structuré (224 lignes, typo heuristic, LineGroup) | ✅ TERMINE | P0
 | CDX-1b | Task `asciiDocToJsonLdd` — AST AsciidoctorJ → JSON LDD | ✅ TERMINE | P0
-| CDX-1c | Task `importBookSql` — JSON LDD → DDL + INSERT PostgreSQL | A FAIRE | P0
+| CDX-1c | Task `importBookSql` — JSON LDD → DDL + INSERT PostgreSQL | ✅ TERMINE | P0
 | CD-2 | Extraction de documentation des dépendances (`acquireDependencyDocs`) | A FAIRE | P1 | codebase-gradle
 | CDX-3 | Task `deriveOntology` — SQL LMD → cartographie ontologique | A FAIRE | P1 | codex-gradle
 | CDX-4 | Task `enrichJsonLdd` — croisement JSON LDD + RAG + Graphify | A FAIRE | P1 | codex-gradle

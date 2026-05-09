@@ -1,29 +1,81 @@
-= PROMPT_REPRISE — codex-gradle
+= PROMPT_REPRISE — Session 007 — Codex Gradle
+:author: cheroliv + opencode (deepseek-v4-pro)
+:date: 2026-05-10
+:session: 006
+:prochaine: 007
 
-'''
-== Session 005 — CDX-1b : asciiDocToJsonLdd via AsciidoctorJ AST
+[abstract]
+Amorçage pour la prochaine session opencode.
 
-*Date* : 2026-05-09 | *Type* : implementation
-*Résultat* : ✅ AsciiDocToJsonLddTask utilise AsciidoctorJ AST (plus de parsing regex maison).
-Build compile OK.
+== Contexte de Reprise (EAGER)
 
-'''
-== Résumé de la dernière session (Session 005 — 2026-05-09)
+=== Ce qui a été accompli — Sessions 000→006
 
-*Ce qui a été fait* :
-- `AsciiDocToJsonLddTask.kt` refactoré : `Asciidoctor.Factory.create()`, traverse
-  AST (`Section`/`Block`) pour construire hiérarchie title/level/children/paragraphs.
-- JSON LDD structural fonctionnel — entités/code_blocks/cross_references → CDX-4.
-- Build compile OK.
+- Session 000 : Bootstrap gouvernance agent + scaffold plugin ✅
+- Session 001 : Design JSON LDD, SQL LMD, Cartographie Ontologique ✅
+- Session 002 : Séparation des Concerns & Bouclage ✅
+- Session 003 : Le Vrai MVP — Boucle d'Autonomie ✅
+- Session 004 : Migration chemins foundry/ → foundry/OSS/ ✅
+- Session 005 : CDX-1b — asciiDocToJsonLdd via AsciidoctorJ AST ✅
+- Session 006 : CDX-1c — importBookSql (JSON LDD → DDL + INSERT PostgreSQL) ✅
 
-*État des EPICs terminés* : CDX-0 (bootstrap), CDX-1a (extractBookStructure PDFBox)
+Chaîne complète CDX-1 validée : PDF → AsciiDoc → JSON LDD → SQL PostgreSQL.
 
-*Prochaine étape* : CDX-1c — `importBookSql` : JSON LDD → DDL + INSERT PostgreSQL
+=== État du code source existant
 
-*Fichiers critiques à charger en EAGER* :
-- `AGENT.adoc`
-- `AUGMENTED_CONTEXT_PIPELINE.adoc` — spec canonique
+[source]
+----
+codex-gradle/
+├── build.gradle.kts
+├── settings.gradle.kts
+├── buildSrc/
+│   └── src/main/kotlin/dev/cheroliv/codex/tasks/
+│       ├── ExtractTextTask.kt              # CDX-0
+│       ├── ExtractBookStructureTask.kt     # CDX-1a — PDFBox → AsciiDoc ✅
+│       ├── AsciiDocToJsonLddTask.kt        # CDX-1b — AsciidoctorJ → JSON LDD ✅
+│       └── ImportBookSqlTask.kt            # CDX-1c — JSON LDD → SQL ✅
+├── doc-pipeline/
+│   └── src/main/kotlin/dev/cheroliv/codex/
+│       ├── CodexPlugin.kt
+│       └── tasks/
+│           ├── ExtractTextTask.kt
+│           └── ExtractBookStructureTask.kt
+├── AUGMENTED_CONTEXT_PIPELINE.adoc
+└── .agents/
+----
 
-*Codebases de référence LAZY* :
-- `foundry/OSS/engine/` (hub N3)
-- `office/books-collection/` (source PDFs)
+Plugin `com.cheroliv.codex.doc-pipeline` 0.1.0-SNAPSHOT.
+4 tâches codex : `extractText`, `extractBookStructure`, `asciiDocToJsonLdd`, `importBookSql`.
+Compile OK ✅.
+
+== Mission du Jour — Session 007
+
+=== Objectif prioritaire : CDX-2 — typographie PDF → hiérarchie de titres
+
+Détection de la hiérarchie des titres dans ExtractBookStructureTask via analyse
+des tailles et graisses de police dans le flux PDF (PDFStreamEngine).
+
+Sous-tâches :
+. Analyser `TextPosition` (fontSize, fontName avec bold/italic) dans le PDFStreamEngine existant
+. Heuristique : plus la police est grosse/grasse, plus le niveau de titre est élevé
+. Déduire une hiérarchie de titres (h1/h2/h3) dans l'AsciiDoc généré
+. Détection de blocs de code via fonte monospace (Courier, Consolas, etc.)
+. Tests unitaires avec un PDF synthétique (2-3 pages, titres multi-niveaux + code)
+
+=== Objectifs secondaires
+
+- Résoudre le split-brain buildSrc/ ↔ doc-pipeline/
+- `./gradlew :doc-pipeline:compileKotlin` après chaque modif
+
+== Rappel — Règles Globales codex-gradle (EAGER)
+
+. Règle 1 : Aucun commit sans permission explicite
+. Règle 2 : Pas de publishToMavenLocal automatique
+. Règle 3 : Secrets via configuration/ — jamais en dur dans build.gradle.kts
+. Règle 4 : Codex est le contrat — types partagés dans codex/
+. Règle 5 : DAG N2 — importable par N3 engine
+. Règle 6 : Procédure 6 étapes de fin de session obligatoire
+
+[.text-right]
+*PROMPT_REPRISE mis à jour le 10 mai 2026 — fin de session 006 (CDX-1c).*
+*Prochaine session : 007 — CDX-2 détection typographique → hiérarchie de titres.*

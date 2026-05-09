@@ -143,3 +143,28 @@ Historique des sessions de developpement du plugin codex-gradle.
 - `AsciiDocToJsonLddTask.kt` refactore : Asciidoctor.Factory.create(), traverse AST (Section/Block)
 - Build compile OK
 - Rapport session 005
+
+'''
+== Session 006 — CDX-1c : importBookSql (JSON LDD → DDL + INSERT PostgreSQL)
+
+*Date* : 2026-05-10
+*Type* : implementation
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : —
+
+*Objectif* :
+- JSON LDD (produit par CDX-1b) → DDL + INSERT PostgreSQL → corpus requêtable en SQL LMD
+
+*Livrables* :
+- `ImportBookSqlTask.kt` (268 lignes) : parser JSON récursif sans dependance externe + generateur DDL/INSERT
+- `DocNode` extrait en top-level dans AsciiDocToJsonLddTask.kt pour reutilisation
+- Convention plugin : nouvelle tache `importBookSql` groupe `codex`
+- 4 taches codex visibles : `extractText`, `extractBookStructure`, `asciiDocToJsonLdd`, `importBookSql`
+- Test bout en bout : test-book.adoc → JSON LDD (1424 octets) → SQL (2375 octets)
+- Hierarchie SQL validee : book → documents(parent_id) → paragraphs(doc_id), IDs sequentiels continus
+
+*Decisions cles* :
+- Parser JSON maison sans kotlinx-serialization : DocNode simple suffisant pour le format LDD actuel
+- Pas d'execution JDBC directe — fichier SQL autonome executable via `psql -f`
+- Bug compteur de doc resolu (retour Pair<Int, Int> dans traverseForInsert)
+- Split-brain buildSrc/doc-pipeline documente mais non corrige (hors scope CDX-1c)

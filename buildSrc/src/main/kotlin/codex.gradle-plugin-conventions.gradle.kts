@@ -1,6 +1,7 @@
 import dev.cheroliv.codex.tasks.AsciiDocToJsonLddTask
 import dev.cheroliv.codex.tasks.ExtractBookStructureTask
 import dev.cheroliv.codex.tasks.ExtractTextTask
+import dev.cheroliv.codex.tasks.ImportBookSqlTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -62,6 +63,15 @@ tasks.register("asciiDocToJsonLdd", AsciiDocToJsonLddTask::class.java) {
         adocFile.set(project.file(project.property("adocFile") as String))
     if (project.hasProperty("jsonFile"))
         jsonFile.set(project.file(project.property("jsonFile") as String))
+}
+
+tasks.register("importBookSql", ImportBookSqlTask::class.java) {
+    group = "codex"
+    description = "JSON LDD → DDL + INSERT PostgreSQL"
+    if (project.hasProperty("jsonFile"))
+        jsonFile.set(project.file(project.property("jsonFile") as String))
+    if (project.hasProperty("sqlFile"))
+        sqlFile.set(project.file(project.property("sqlFile") as String))
 }
 
 publishing {
