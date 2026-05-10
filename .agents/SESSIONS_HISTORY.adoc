@@ -168,3 +168,85 @@ Historique des sessions de developpement du plugin codex-gradle.
 - Pas d'execution JDBC directe — fichier SQL autonome executable via `psql -f`
 - Bug compteur de doc resolu (retour Pair<Int, Int> dans traverseForInsert)
 - Split-brain buildSrc/doc-pipeline documente mais non corrige (hors scope CDX-1c)
+
+'''
+== Session 007 — CDX-2 : détection typographique → hiérarchie multi-niveaux + blocs de code
+
+*Date* : 2026-05-10
+*Type* : implementation
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : —
+
+*Objectif* :
+- Détection de la hiérarchie des titres via analyse des tailles et graisses de police PDF
+- Détection de blocs de code via fonte monospace
+- Résoudre le split-brain buildSrc/ ↔ doc-pipeline/
+
+*Livrables* :
+- `FontStyleDetector` + `FontStyle` enum (NORMAL, BOLD, ITALIC, BOLD_ITALIC, MONOSPACE)
+- Hiérarchie h1/h2/h3 basée sur max-font-size ratios (95%/75%/50%) + bold bonus
+- Blocs de code : 2+ lignes monospace → [source,text] + ----, 1 ligne → backticks
+- `writeString` remplace `processTextPosition` → texte reconstruit proprement
+- Split-brain résolu : 4 tasks migrées de buildSrc/ vers doc-pipeline/
+- 4 tâches codex enregistrées dans CodexPlugin
+- `ExtractBookStructureTaskTest.kt` (288 lignes, 10 tests) : 10/10 PASS
+
+*Decisions cles* :
+- Seuils basés sur max*ratio plutôt que avg+range : plus robuste aux petits échantillons
+- `writeString` via PDFTextStripper > `processTextPosition` caractère par caractère
+- buildSrc/ désormais pure convention plugin — zéro logique métier
+
+'''
+== Session 008 — CDX-3 : convertToMarkdown (AsciiDoc structuré → Markdown)
+
+*Date* : 2026-05-10
+*Type* : implementation
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : —
+
+*Objectif* :
+- Conversion AsciiDoc structuré → Markdown propre avec préservation hiérarchie, code, tableaux
+
+*Livrables* :
+- `ConvertToMarkdownTask.kt` (173 lignes) : conversion ligne à ligne
+  - Hiérarchie `=`/`==`/`===` → `#`/`##`/`###`
+  - Blocs de code `[source,java]` + `----` → ```java ... ```
+  - Tableaux `|===` / `|` → Markdown tables
+  - Images `image:alt[path]` → `![alt](path)`
+  - Admonitions → `> **Note**` blockquote
+  - Listes, liens, inline formatting (bold, italic, code)
+- `CodexPlugin.kt` : 5 tâches enregistrées (ajout `convertToMarkdown`)
+- Build compile OK
+
+*Pipeline consolidé* :
+PDF → extractBookStructure (.adoc) → asciiDocToJsonLdd (JSON LDD) → importBookSql (SQL)
+                                      → convertToMarkdown (.md)
+
+'''
+== Session 009 — CDX-4 : chunkDocument (chunking sémantique par section)
+
+*Date* : 2026-05-10
+*Type* : implementation
+*Modele* : deepseek-v4-pro:cloud (via opencode)
+*Score* : —
+
+*Objectif* :
+- Découpage sémantique par section — 1 chunk par heading Markdown
+- Pas de chunking par taille fixe : chunk = unité documentaire sémantique
+
+*Livrables* :
+- `DocumentChunk` data class (id SHA-256, sourceDocument, sectionPath, headingLevel, content, codeBlocks, overlap, license)
+- `ChunkDocumentTask.kt` (217 lignes) :
+  - 1 chunk par heading (`#` à `######`)
+  - `sectionPath` reconstruit depuis les ancêtres (ex: `Chapitre 1 > Section 1.2`)
+  - Overlap : 2 premières phrases de la section suivante
+  - Extraction des blocks de code dans le champ `codeBlocks`
+  - Output JSON pretty-printé via `kotlinx.serialization`
+- `CodexPlugin.kt` : 6 tâches enregistrées (ajout `chunkDocument`)
+- Build compile OK, 0 warnings
+
+*Pipeline consolidé* :
+PDF → extractBookStructure (.adoc) → asciiDocToJsonLdd (JSON LDD) → importBookSql (SQL)
+                                      → convertToMarkdown (.md) → chunkDocument (JSON chunks)
+
+Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅

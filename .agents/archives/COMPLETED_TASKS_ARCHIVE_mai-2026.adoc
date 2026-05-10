@@ -22,3 +22,39 @@ Test bout en bout : test-book.adoc → JSON LDD → SQL (IDs séquentiels, FK co
 *Livrables* : `ImportBookSqlTask.kt`, `AsciiDocToJsonLddTask.kt` (DocNode top-level),
 `codex.gradle-plugin-conventions.gradle.kts` (nouvelle tâche), `006-import-book-sql.adoc` (rapport).
 *Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` BUILD SUCCESSFUL. 4 tâches codex.
+
+'''
+== CDX-2 — détection typographique → hiérarchie multi-niveaux + blocs de code (2026-05-10)
+
+*Session* : 007
+*Type* : implementation
+*Détail* : FontStyleDetector (bold/italic/monospace depuis fontName), hiérarchie h1/h2/h3
+par max-font-size ratios (95%/75%/50%) + bonus bold, blocs de code monospace →
+[source,text]/backticks, writeString remplace processTextPosition, split-brain
+buildSrc/doc-pipeline résolu.
+*Livrables* : `FontStyle.kt`, `DocNode.kt`, `CodexPlugin.kt` (4 tâches), `ExtractBookStructureTask.kt`
+(refacto), `AsciiDocToJsonLddTask.kt` + `ImportBookSqlTask.kt` (migrés doc-pipeline/),
+`ExtractBookStructureTaskTest.kt` (288 lignes), `007-cdx2-hierarchy-typographique.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` BUILD SUCCESSFUL. Tests 10/10 PASS.
+
+'''
+== CDX-3 — convertToMarkdown (2026-05-10)
+
+*Session* : 008
+*Type* : implementation
+*Détail* : Création ConvertToMarkdownTask (173 lignes) — conversion AsciiDoc structuré →
+Markdown ligne à ligne. Préservation hiérarchie, blocs de code (source,java → ```),
+tableaux, images, admonitions, liens, inline formatting.
+*Livrables* : `ConvertToMarkdownTask.kt`, `CodexPlugin.kt` (5 tâches), `008-cdx3-convert-to-markdown.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` BUILD SUCCESSFUL.
+
+'''
+== CDX-4 — chunkDocument (2026-05-10)
+
+*Session* : 009
+*Type* : implementation
+*Détail* : Création ChunkDocumentTask (217 lignes) — découpage sémantique par section.
+Data class DocumentChunk (id SHA-256, sectionPath, codeBlocks, overlap 2 phrases).
+1 chunk par heading Markdown, sectionPath reconstruit depuis ancêtres, JSON kotlinx.serialization.
+*Livrables* : `ChunkDocumentTask.kt`, `CodexPlugin.kt` (6 tâches), `009-cdx4-chunk-document.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` BUILD SUCCESSFUL, 0 warnings.

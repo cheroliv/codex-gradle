@@ -1,0 +1,54 @@
+= Rapport Session 008 — CDX-3 : convertToMarkdown
+:author: cheroliv + opencode (deepseek-v4-pro:cloud)
+:date: 2026-05-10
+:session: 008
+:epic: CDX-3
+:status: ✅ TERMINÉ
+
+== Objectif
+
+Création de la task `convertToMarkdown` — conversion AsciiDoc structuré → Markdown.
+
+== Livrables
+
+=== 1. ConvertToMarkdownTask.kt (173 lignes)
+
+Conversion ligne à ligne avec préservation :
+- Hiérarchie AsciiDoc `=`/`==`/`===` → Markdown `#`/`##`/`###`
+- Blocs de code `[source,java]` + `----` → ```java ... ```
+- Tableaux `|===` / `|` → Markdown tables `| ... |`
+- Images `image:alt[path]` → `![alt](path)`
+- Liens `link:` / `http` → `[text](url)`
+- Admonitions `[NOTE]` / `[WARNING]` / `[TIP]` → `> **Note**` blockquote
+- Listes `* item` → `- item`
+- Inline formatting : **bold**, *italic*, `code`, _underline_
+
+=== 2. CodexPlugin mis à jour
+
+5 tâches enregistrées : extractText, extractBookStructure, asciiDocToJsonLdd, importBookSql, convertToMarkdown.
+
+== Fichiers produits/modifiés
+
+|===
+| Fichier | Action | Lignes
+| `doc-pipeline/src/main/kotlin/.../ConvertToMarkdownTask.kt` | Créé | 173
+| `doc-pipeline/src/main/kotlin/.../CodexPlugin.kt` | Modifié (+import +register) | 60
+|===
+
+== Vérification
+
+* `./gradlew :doc-pipeline:compileKotlin` → BUILD SUCCESSFUL
+* Zéro secret détecté
+* Zéro commit effectué
+* Tests non lancés (règle : pas de test sans permission)
+
+== Pipeline codex — État consolidé
+
+PDF → extractBookStructure (.adoc) → asciiDocToJsonLdd (JSON LDD) → importBookSql (SQL PostgreSQL)
+                                                                    → convertToMarkdown (.md)
+
+Chaîne : CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅
+Prochain : CDX-4 chunkDocument (P0)
+
+[.text-right]
+*Rapport créé le 10 mai 2026 — Session 008 CDX-3 terminée.*

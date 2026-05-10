@@ -6,8 +6,8 @@ _Ontologie spatiale_ : voir `configuration/.agents/AGENT_GOVERNANCE.adoc`
 _DAG_ : N2 — Plugin Gradle d'acquisition de documents (Regle 4bis)
 
 _Derniere mise a jour_ : 2026-05-10
-_Session en cours_ : 007 — CDX-2 : détection typographique → hiérarchie de titres
-_Session precedente_ : 006 ✅ (CDX-1c importBookSql TERMINÉ)
+_Session terminee_ : 009 ✅ (CDX-4 chunkDocument TERMINÉ)
+_Session precedente_ : 008 ✅ (CDX-3 convertToMarkdown TERMINÉ)
 
 '''
 == REGLES ABSOLUES (resume)
@@ -31,6 +31,9 @@ _Session precedente_ : 006 ✅ (CDX-1c importBookSql TERMINÉ)
 | 004 | 2026-05-07 | chore | Migration chemins foundry/ → foundry/OSS/ (granularisation OSS/CSS) | —
 | 005 | 2026-05-09 | impl | CDX-1b asciiDocToJsonLdd via AsciidoctorJ AST | —
 | 006 | 2026-05-10 | impl | CDX-1c importBookSql — JSON LDD → DDL + INSERT PostgreSQL | —
+| 007 | 2026-05-10 | impl | CDX-2 — détection typographique → hiérarchie multi-niveaux + code | —
+| 008 | 2026-05-10 | impl | CDX-3 — convertToMarkdown (AsciiDoc → Markdown) | —
+| 009 | 2026-05-10 | impl | CDX-4 — chunkDocument (chunking sémantique par section) | —
 |===
 
 '''
@@ -42,17 +45,9 @@ _Session precedente_ : 006 ✅ (CDX-1c importBookSql TERMINÉ)
 | CDX-1a | Task `extractBookStructure` — PDFBox PDFStreamEngine → AsciiDoc structuré (224 lignes, typo heuristic, LineGroup) | ✅ TERMINE | P0
 | CDX-1b | Task `asciiDocToJsonLdd` — AST AsciidoctorJ → JSON LDD | ✅ TERMINE | P0
 | CDX-1c | Task `importBookSql` — JSON LDD → DDL + INSERT PostgreSQL | ✅ TERMINE | P0
-| CD-2 | Extraction de documentation des dépendances (`acquireDependencyDocs`) | A FAIRE | P1 | codebase-gradle
-| CDX-3 | Task `deriveOntology` — SQL LMD → cartographie ontologique | A FAIRE | P1 | codex-gradle
-| CDX-4 | Task `enrichJsonLdd` — croisement JSON LDD + RAG + Graphify | A FAIRE | P1 | codex-gradle
-| CDX-5 | Task `exportKnowledgeBase` — JSON-L / Markdown / AsciiDoc | A FAIRE | P1 | codex-gradle
-| LIB-0 | Création `foundry/OSS/library-gradle/` + gouvernance agent | A FAIRE | P2 | library-gradle
-| LIB-1 | Task `assembleLibrary` — agrégation cross-books (5 critères) | A FAIRE | P2 | library-gradle
-| TRN-0 | Création `foundry/OSS/trainer-gradle/` + gouvernance agent | A FAIRE | P3 | trainer-gradle
-| TRN-1 | Task `assembleTrainingDataset` | A FAIRE | P3 | trainer-gradle
-| CDX-2 | Détection typographique → hiérarchie de titres | A FAIRE | P0
-| CDX-3 | Task `convertToMarkdown` avec blocs de code | A FAIRE | P0
-| CDX-4 | Task `chunkDocument` — stratégie sémantique | A FAIRE | P0
+| CDX-2 | Détection typographique → hiérarchie multi-niveaux + blocs de code | ✅ TERMINE | P0
+| CDX-3 | Task `convertToMarkdown` avec blocs de code | ✅ TERMINE | P0
+| CDX-4 | Task `chunkDocument` — stratégie sémantique | ✅ TERMINE | P0
 | CDX-5 | Task `exportKnowledgeBase` — JSON-L / Markdown / AsciiDoc | A FAIRE | P1
 | CDX-6 | Intégration arborescence OSS/CSS + routing licence | A FAIRE | P1
 | CDX-7 | Tests unitaires + intégration | A FAIRE | P1
@@ -76,8 +71,8 @@ _Session precedente_ : 006 ✅ (CDX-1c importBookSql TERMINÉ)
 | `settings.gradle.kts` | ✅ rootProject + include doc-pipeline
 | `buildSrc/` | ✅ Convention plugin + catalog buildSrc
 | `doc-pipeline/build.gradle.kts` | ✅ Dependances + publication
-| `doc-pipeline/src/main/` | ✅ CodexPlugin.kt + ExtractTextTask.kt + ExtractBookStructureTask.kt
-| `doc-pipeline/src/test/` | 🚧 Structure prête, tests a ecrire
+| `doc-pipeline/src/main/` | ✅ CodexPlugin.kt + ExtractTextTask.kt + ExtractBookStructureTask.kt + AsciiDocToJsonLddTask.kt + ImportBookSqlTask.kt + ConvertToMarkdownTask.kt + ChunkDocumentTask.kt + DocNode.kt + FontStyle.kt
+| `doc-pipeline/src/test/` | ✅ ExtractBookStructureTaskTest.kt (10/10 PASS)
 |===
 
 '''

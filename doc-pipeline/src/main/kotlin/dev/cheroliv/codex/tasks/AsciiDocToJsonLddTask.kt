@@ -125,11 +125,3 @@ abstract class AsciiDocToJsonLddTask : DefaultTask() {
     }
 
 }
-
-data class DocNode(
-    val title: String,
-    val level: Int,
-    val children: MutableList<DocNode> = mutableListOf()
-) {
-    val isParagraph: Boolean get() = level == -1
-}

@@ -1,0 +1,85 @@
+= Rapport Session 007 — CDX-2 : détection typographique → hiérarchie de titres
+:author: cheroliv + opencode (deepseek-v4-pro:cloud)
+:date: 2026-05-10
+:session: 007
+:epic: CDX-2
+:status: ✅ TERMINÉ
+
+== Objectif
+
+Détection de la hiérarchie des titres dans `ExtractBookStructureTask` via analyse
+des tailles et graisses de police dans le flux PDF (PDFBox `writeString` + `TextPosition`).
+
+== Livrables
+
+=== 1. Fix split-brain buildSrc/ ↔ doc-pipeline/
+
+* `AsciiDocToJsonLddTask` et `ImportBookSqlTask` migrées de `buildSrc/` → `doc-pipeline/`
+* `DocNode` extrait dans `DocNode.kt` (top-level shared)
+* Duplicats `ExtractTextTask` et `ExtractBookStructureTask` supprimés de `buildSrc/`
+* Convention plugin `buildSrc/` nettoyé (plus d'enregistrement direct de tâches)
+* `CodexPlugin` enregistre maintenant les 4 tâches : `extractText`, `extractBookStructure`, `asciiDocToJsonLdd`, `importBookSql`
+
+=== 2. FontStyleDetector
+
+* Nouveau fichier `FontStyle.kt` : enum `FontStyle` (NORMAL, BOLD, ITALIC, BOLD_ITALIC, MONOSPACE) + `FontStyleDetector`
+* Détection via fontName (lowercase) :
+** Bold : contient "bold", "heavy", "black"
+** Italic : contient "italic", "oblique", "slanted"
+** Monospace : courier, mono, consolas, menlo, jetbrains, fira code, source code, dejavu sans mono, liberation mono
+** Bold+Italic : "BoldItalic" → BOLD_ITALIC
+
+=== 3. Hiérarchie multi-niveaux
+
+* Ancienne logique : 2 niveaux (chapter ≥ threshold, section ≥ threshold) basée sur avg + range
+* Nouvelle logique : 3 niveaux (h1/h2/h3) basée sur `max * ratio`
+** h1 ≥ `max * 0.95` (et bold pour = , sinon ==)
+** h2 ≥ `max * 0.75` (et bold pour ==, sinon ===)
+** h3 ≥ `max * 0.50` (et bold pour ===, sinon ignoré)
+* `writeString` remplace `processTextPosition` → texte reconstruit proprement, pas de fragments caractère par caractère
+* Grouping simplifié : plus de Y-grouping complexe, `writeString` donne déjà des lignes
+
+=== 4. Blocs de code monospace
+
+* Détection : si `fontStyle.isMonospace()` → accumulate lines
+* 2+ lignes monospace consécutives → `[source,text]` + `----`
+* 1 ligne monospace seule → `backtick` inline
+
+=== 5. Tests unitaires
+
+* `ExtractBookStructureTaskTest.kt` (288 lignes, 10 tests)
+* PDFBox création de PDF synthétiques via `PDDocument`/`PDPageContentStream`
+** 4 tests `FontStyleDetector` (bold, italic, monospace, normal, bolditalic)
+** 3 tests `extractBookStructure` (headers + code, vide, code-only)
+** 1 test `hierarchy` (hiérarchie multi-niveaux)
+** 1 test `inline code` (single line monospace)
+** 1 test `empty PDF`
+* Résultat : **10/10 PASS**
+
+== Fichiers produits/modifiés
+
+|===
+| Fichier | Action | Lignes
+| `doc-pipeline/src/main/kotlin/.../AsciiDocToJsonLddTask.kt` | Créé (migré) | 128
+| `doc-pipeline/src/main/kotlin/.../ImportBookSqlTask.kt` | Créé (migré) | 268
+| `doc-pipeline/src/main/kotlin/.../DocNode.kt` | Créé | 10
+| `doc-pipeline/src/main/kotlin/.../FontStyle.kt` | Créé | 43
+| `doc-pipeline/src/main/kotlin/.../ExtractBookStructureTask.kt` | Refacto | 287
+| `doc-pipeline/src/main/kotlin/.../CodexPlugin.kt` | Modifié | 45
+| `buildSrc/src/main/kotlin/codex.gradle-plugin-conventions.gradle.kts` | Nettoyé | 40
+| `doc-pipeline/src/test/.../ExtractBookStructureTaskTest.kt` | Créé | 288
+| `buildSrc/.../ExtractTextTask.kt` | Supprimé | —
+| `buildSrc/.../ExtractBookStructureTask.kt` | Supprimé | —
+| `buildSrc/.../AsciiDocToJsonLddTask.kt` | Supprimé | —
+| `buildSrc/.../ImportBookSqlTask.kt` | Supprimé | —
+|===
+
+== Vérification
+
+* `./gradlew :doc-pipeline:compileKotlin` → BUILD SUCCESSFUL
+* `./gradlew :doc-pipeline:test` → 10/10 PASS
+* Zéro secret détecté
+* Zéro commit effectué
+
+[.text-right]
+*Rapport créé le 10 mai 2026 — Session 007 CDX-2 terminée.*

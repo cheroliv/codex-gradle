@@ -1,7 +1,11 @@
 package dev.cheroliv.codex
 
+import dev.cheroliv.codex.tasks.AsciiDocToJsonLddTask
+import dev.cheroliv.codex.tasks.ChunkDocumentTask
+import dev.cheroliv.codex.tasks.ConvertToMarkdownTask
 import dev.cheroliv.codex.tasks.ExtractBookStructureTask
 import dev.cheroliv.codex.tasks.ExtractTextTask
+import dev.cheroliv.codex.tasks.ImportBookSqlTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
@@ -24,6 +28,38 @@ class CodexPlugin : Plugin<Project> {
         ) {
             it.group = GROUP
             it.description = "Extrait la structure d'un PDF (titres, sections) et produit un .adoc hiérarchique"
+        }
+
+        project.tasks.register(
+            "asciiDocToJsonLdd",
+            AsciiDocToJsonLddTask::class.java
+        ) {
+            it.group = GROUP
+            it.description = "Parse un .adoc via AsciidoctorJ → JSON LDD structuré"
+        }
+
+        project.tasks.register(
+            "importBookSql",
+            ImportBookSqlTask::class.java
+        ) {
+            it.group = GROUP
+            it.description = "JSON LDD → DDL + INSERT PostgreSQL"
+        }
+
+        project.tasks.register(
+            "convertToMarkdown",
+            ConvertToMarkdownTask::class.java
+        ) {
+            it.group = GROUP
+            it.description = "Convertit un .adoc structure en Markdown avec hierarchie et blocs de code preserves"
+        }
+
+        project.tasks.register(
+            "chunkDocument",
+            ChunkDocumentTask::class.java
+        ) {
+            it.group = GROUP
+            it.description = "Decoupe un document Markdown en chunks semantiques par section (1 chunk par heading)"
         }
     }
 

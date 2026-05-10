@@ -1,0 +1,38 @@
+= TEST_COVERAGE_ANALYSIS — codex-gradle
+:date: 2026-05-10
+:session: 007
+
+== Couverture par Classe
+
+|===
+| Classe | Tests | Couverture
+| `FontStyleDetector` | 5 | ✅ Bold, Italic, Monospace, Normal, BoldItalic
+| `ExtractBookStructureTask` | 5 | ✅ Headers+code, Empty PDF, Monospace, Hiérarchie, Inline code
+| Total | 10 | 10/10 PASS
+|===
+
+== Scénarios Couverts
+
+|===
+| Scénario | Test | Statut
+| Détection Bold | `detection bold font style from font name` | ✅
+| Détection Italic | `detection italic font style from font name` | ✅
+| Détection Monospace | `detection monospace font style from font name` | ✅
+| Détection Normal | `normal font returns normal style` | ✅
+| Détection BoldItalic | `bold italic font detected correctly` | ✅
+| Extraction complète | `extractBookStructure produces AsciiDoc with headers and code block` | ✅
+| Document vide | `empty PDF returns empty document marker` | ✅
+| Bloc de code | `monospace detection triggers code blocks even with short code` | ✅
+| Hiérarchie | `header hierarchy reflects font size and boldness` | ✅
+| Code inline | `single line monospace becomes inline code` | ✅
+|===
+
+== Non Couvert
+
+* `ExtractTextTask` — pas de tests (pas modifié en session 007)
+* `AsciiDocToJsonLddTask` — pas de tests (non modifié)
+* `ImportBookSqlTask` — pas de tests (test manuel bout-en-bout en session 006)
+* `CodexPlugin` — pas de tests unitaires (couvert implicitement par les tests de tasks)
+
+[.text-right]
+*Analyse créée le 10 mai 2026 — Session 007 CDX-2.*

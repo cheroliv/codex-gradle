@@ -1,0 +1,61 @@
+= Rapport Session 009 — CDX-4 : chunkDocument
+:author: cheroliv + opencode (deepseek-v4-pro:cloud)
+:date: 2026-05-10
+:session: 009
+:epic: CDX-4
+:status: ✅ TERMINÉ
+
+== Objectif
+
+Création de la task `chunkDocument` — découpage sémantique par section
+(1 chunk par heading Markdown, pas de taille fixe).
+
+== Livrables
+
+=== 1. ChunkDocumentTask.kt (217 lignes)
+
+Data class `DocumentChunk` avec :
+- `id` (SHA-256 tronqué sur `sourceDocument:sectionPath` → `chk-xxxxxxxx`)
+- `sourceDocument`, `sectionPath`, `headingLevel`
+- `content` (heading + contenu jusqu'au prochain heading)
+- `codeBlocks` extraits
+- `overlapNext` : 2 premières phrases de la section suivante
+- `entities`, `license`
+
+Stratégie de chunking :
+- Parse headings Markdown (`#` à `######`) comme délimiteurs
+- 1 chunk par section avec son contenu complet
+- `sectionPath` reconstruit depuis les ancêtres (ex: `Chapitre 1 > Section 1.2`)
+- Overlap configurable via `extractFirstTwoSentences`
+- Output : JSON array pretty-printé via `kotlinx.serialization`
+
+=== 2. CodexPlugin mis à jour
+
+6 tâches enregistrées : extractText, extractBookStructure, asciiDocToJsonLdd,
+importBookSql, convertToMarkdown, **chunkDocument**.
+
+== Fichiers produits/modifiés
+
+|===
+| Fichier | Action | Lignes
+| `doc-pipeline/src/main/kotlin/.../ChunkDocumentTask.kt` | Créé | 217
+| `doc-pipeline/src/main/kotlin/.../CodexPlugin.kt` | Modifié (+import +register) | 69
+|===
+
+== Vérification
+
+* `./gradlew :doc-pipeline:compileKotlin` → BUILD SUCCESSFUL (0 warnings)
+* Zéro secret détecté
+* Tests non lancés (règle : pas de test sans permission)
+
+== Pipeline codex — État consolidé
+
+PDF → extractBookStructure (.adoc) → asciiDocToJsonLdd (JSON LDD) → importBookSql (SQL)
+                                                                    → convertToMarkdown (.md)
+                                                                    → chunkDocument (JSON chunks)
+
+Chaîne : CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅
+Prochain : CDX-5 exportKnowledgeBase (P1)
+
+[.text-right]
+*Rapport créé le 10 mai 2026 — Session 009 CDX-4 terminée.*

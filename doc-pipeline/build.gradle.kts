@@ -4,6 +4,7 @@ plugins {
     `maven-publish`
     `java-gradle-plugin`
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kover)
     id("codex.gradle-plugin-conventions")
 }
 
@@ -111,4 +112,13 @@ signing {
 java {
     withJavadocJar()
     withSourcesJar()
+}
+
+kover {
+    reports {
+        total {
+            xml { onCheck = true }
+            html { onCheck = true }
+        }
+    }
 }

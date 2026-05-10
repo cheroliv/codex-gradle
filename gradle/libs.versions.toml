@@ -17,6 +17,9 @@ asciidoctorj = "3.0.0"
 jackson = "2.18.2"
 kotlinx-serial = "1.7.3"
 
+# ── Coverage ───────────────────────────────────────────────────────────────────
+kover = "0.9.1"
+
 # ── Tests ─────────────────────────────────────────────────────────────────────
 junit-jupiter = "5.12.2"
 junit-platform = "1.12.2"
@@ -44,5 +47,6 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 plugin-publish = { id = "com.gradle.plugin-publish", version.ref = "plugin-publish" }
 readme = { id = "com.cheroliv.readme", version.ref = "readme" }
