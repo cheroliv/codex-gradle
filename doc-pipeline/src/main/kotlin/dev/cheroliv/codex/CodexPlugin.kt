@@ -13,7 +13,13 @@ import org.gradle.api.Project
 class CodexPlugin : Plugin<Project> {
 
     override fun apply(project: Project) {
-        project.logger.lifecycle("[codex] Plugin chargé — pipeline doc activé")
+        val zone = LicenseZoneDetector.detect(project.projectDir.absolutePath)
+        val license = LicenseZoneDetector.toLicenseName(zone)
+
+        project.logger.lifecycle("[codex] Plugin chargé — pipeline doc activé (zone: $zone, licence: $license)")
+
+        val extension = project.extensions.create("codex", CodexExtension::class.java)
+        extension.zone.convention(zone)
 
         project.tasks.register(
             "extractText",
@@ -61,6 +67,7 @@ class CodexPlugin : Plugin<Project> {
         ) {
             it.group = GROUP
             it.description = "Decoupe un document Markdown en chunks semantiques par section (1 chunk par heading)"
+            it.licenseName.convention(license)
         }
 
         project.tasks.register(

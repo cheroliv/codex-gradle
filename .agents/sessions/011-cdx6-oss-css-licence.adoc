@@ -1,0 +1,62 @@
+= Rapport Session 011 — CDX-6 : arborescence OSS/CSS + routing licence
+:author: cheroliv + opencode (deepseek-v4-pro:cloud)
+:date: 2026-05-10
+:session: 011
+:epic: CDX-6
+:status: ✅ TERMINÉ
+
+== Objectif
+
+Détection automatique de la zone (OSS vs CSS) par chemin physique
+et routage des licences dans le pipeline.
+
+== Livrables
+
+=== 1. LicenseZoneDetector.kt (20 lignes)
+
+- Enum `LicenseZone` : OSS, CSS, UNKNOWN
+- Détection par chemin : `/foundry/OSS/` → OSS, `/foundry/CSS/` → CSS
+- Mapping licence : OSS → `Apache-2.0`, CSS → `PROPRIETARY`
+
+=== 2. CodexExtension.kt
+
+Extension Gradle `codex { zone = ... }` avec `Property<LicenseZone>`.
+Accessible par les builds consommateurs du plugin.
+
+=== 3. CodexPlugin.kt mis à jour
+
+- Détection de zone au chargement (`project.projectDir.absolutePath`)
+- Création de l'extension `codex`
+- Injection `licenseName` dans `chunkDocument`
+
+=== 4. ChunkDocumentTask.kt mis à jour
+
+- Nouvelle propriété `licenseName: @Input Property<String>`
+- Propagation automatique : `DocumentChunk.license = licenseName.get()`
+
+== Fichiers produits/modifiés
+
+|===
+| Fichier | Action | Lignes
+| `doc-pipeline/src/main/kotlin/.../LicenseZoneDetector.kt` | Créé | 20
+| `doc-pipeline/src/main/kotlin/.../CodexExtension.kt` | Créé | 7
+| `doc-pipeline/src/main/kotlin/.../CodexPlugin.kt` | Modifié | 82
+| `doc-pipeline/src/main/kotlin/.../ChunkDocumentTask.kt` | Modifié | 228
+|===
+
+== Vérification
+
+* `./gradlew :doc-pipeline:compileKotlin` → BUILD SUCCESSFUL (0 warnings)
+* `./gradlew :doc-pipeline:compileTestKotlin` → BUILD SUCCESSFUL
+* Zéro secret détecté
+
+== Pipeline codex — État consolidé
+
+7 tâches enregistrées. Zone/licence détectée au boot du plugin.
+Chaque chunk porte la licence correcte (Apache-2.0 ou PROPRIETARY).
+
+Chaîne : CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅ | CDX-6 ✅
+Prochain : CDX-7 — Tests unitaires + intégration (P1)
+
+[.text-right]
+*Rapport créé le 10 mai 2026 — Session 011 CDX-6 terminée.*

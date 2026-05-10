@@ -1,15 +1,15 @@
-= PROMPT_REPRISE — Session 011 — Codex Gradle
+= PROMPT_REPRISE — Session 012 — Codex Gradle
 :author: cheroliv + opencode (deepseek-v4-pro)
 :date: 2026-05-10
-:session: 010
-:prochaine: 011
+:session: 011
+:prochaine: 012
 
 [abstract]
 Amorçage pour la prochaine session opencode.
 
 == Contexte de Reprise (EAGER)
 
-=== Ce qui a été accompli — Sessions 000→010
+=== Ce qui a été accompli — Sessions 000→011
 
 - Session 000 : Bootstrap gouvernance agent + scaffold plugin ✅
 - Session 001 : Design JSON LDD, SQL LMD, Cartographie Ontologique ✅
@@ -22,53 +22,51 @@ Amorçage pour la prochaine session opencode.
 - Session 008 : CDX-3 — convertToMarkdown (Asciidoctor → Markdown) ✅
 - Session 009 : CDX-4 — chunkDocument (chunking sémantique par section) ✅
 - Session 010 : CDX-5 — exportKnowledgeBase (JSON-L/Markdown/AsciiDoc export) ✅
+- Session 011 : CDX-6 — arborescence OSS/CSS + routing licence ✅
 
-Chaîne complète CDX-1→5 validée : PDF → AsciiDoc → JSON LDD → SQL / Markdown → chunks JSON → knowledge base multi-format.
-Plugin enregistre 7 tâches. Compile OK.
+Pipeline complet (8 EPICs) : PDF → AsciiDoc → JSON LDD → SQL/Markdown → chunks → knowledge base.
+7 tâches enregistrées. Zone/licence détectée automatiquement au boot.
 
 === État du code source
 
 [source]
 ----
 doc-pipeline/src/main/kotlin/dev/cheroliv/codex/
-├── CodexPlugin.kt                          # 7 tâches enregistrées
+├── CodexPlugin.kt                          # 7 tâches + extension codex
+├── CodexExtension.kt                       # Extension codex { zone }
+├── LicenseZoneDetector.kt                  # OSS/CSS detection + licence routing
 └── tasks/
     ├── ExtractTextTask.kt                  # CDX-0
     ├── ExtractBookStructureTask.kt         # CDX-1a + CDX-2
     ├── AsciiDocToJsonLddTask.kt            # CDX-1b
     ├── ImportBookSqlTask.kt                # CDX-1c
     ├── ConvertToMarkdownTask.kt            # CDX-3
-    ├── ChunkDocumentTask.kt                # CDX-4 ✅
-    ├── ExportKnowledgeBaseTask.kt          # CDX-5 ✅ 215 lignes
+    ├── ChunkDocumentTask.kt                # CDX-4
+    ├── ExportKnowledgeBaseTask.kt          # CDX-5
     ├── DocNode.kt                          # Type partagé
     └── FontStyle.kt                        # FontStyleDetector + enum
-
-doc-pipeline/src/test/
-├── ExtractBookStructureTaskTest.kt         # 10/10 PASS
-├── ExtractTextTaskTest.kt
-├── ConvertToMarkdownTaskTest.kt
-├── AsciiDocToJsonLddTaskTest.kt
-├── ImportBookSqlTaskTest.kt
-└── CodexPluginTest.kt
 ----
 
-== Mission du Jour — Session 011
+== Mission du Jour — Session 012
 
-=== Objectif prioritaire : CDX-6 — Intégration arborescence OSS/CSS + routing licence
+=== Objectif prioritaire : CDX-7 — Tests unitaires + intégration
 
-Détection automatique de la zone (OSS vs CSS) et routage des licences :
-- Zone OSS → Apache 2.0, publié sur Sonatype
-- Zone CSS → Propriétaire, repo GitHub privé, pas de copyleft
-- Détection basée sur le chemin physique (foundry/OSS/ vs foundry/CSS/)
-- Intégration dans le pipeline : les métadonnées de zone dans DocumentChunk.license
+Tests pour les 7 tâches du pipeline :
+- ExtractTextTaskTest (existant, à compléter)
+- ExtractBookStructureTaskTest (10/10 PASS existant)
+- AsciiDocToJsonLddTaskTest (placeholder)
+- ImportBookSqlTaskTest (placeholder)
+- ConvertToMarkdownTaskTest (placeholder)
+- ChunkDocumentTaskTest (nouveau)
+- ExportKnowledgeBaseTaskTest (nouveau)
+- LicenceZoneDetectorTest (nouveau)
 
 === Roadmap
 
 |===
 | EPIC | Description | Priorité
-| CDX-6 | Intégration arborescence OSS/CSS + routing licence | P1
 | CDX-7 | Tests unitaires + intégration | P1
-| CDX-8 | `codexIngest` → pgvector | P2
+| CDX-8 | `codexIngest` — vectorisation ONNX → pgvector | P2
 | CDX-9 | `codex-epub` — implémentation EPUB | P3
 |===
 
@@ -82,5 +80,5 @@ Détection automatique de la zone (OSS vs CSS) et routage des licences :
 . Règle 6 : Procédure 6 étapes de fin de session obligatoire
 
 [.text-right]
-*PROMPT_REPRISE mis à jour le 10 mai 2026 — fin de session 010 (CDX-5).*
-*Prochaine session : 011 — CDX-6 arborescence OSS/CSS.*
+*PROMPT_REPRISE mis à jour le 10 mai 2026 — fin de session 011 (CDX-6).*
+*Prochaine session : 012 — CDX-7 tests unitaires.*

@@ -277,3 +277,27 @@ PDF → extractBookStructure (.adoc) → asciiDocToJsonLdd (JSON LDD) → import
                                       → exportKnowledgeBase (JSON-L/.md/.adoc)
 
 Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅
+
+'''
+== Session 011 — CDX-6 : arborescence OSS/CSS + routing licence
+
+*Date* : 2026-05-10
+*Type* : implementation
+*Modele* : deepseek-v4-pro:cloud (via opencode)
+*Score* : —
+
+*Objectif* :
+- Détection automatique zone OSS/CSS par chemin physique
+- Routage licence dans le pipeline
+
+*Livrables* :
+- `LicenseZoneDetector.kt` : enum + détection OSS/CSS/UNKNOWN, mapping Apache-2.0/PROPRIETARY
+- `CodexExtension.kt` : extension Gradle `codex { zone }` avec Property<LicenseZone>
+- `CodexPlugin.kt` : détection auto au chargement, injection licence dans chunks
+- `ChunkDocumentTask.kt` : licence propagée automatiquement dans DocumentChunk
+- Build compile OK (main + tests), 0 warnings
+
+*Pipeline consolidé* :
+Zone/licence détectée au boot du plugin. Chaque chunk porte la licence correcte.
+
+Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅ | CDX-6 ✅

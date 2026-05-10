@@ -6,8 +6,8 @@ _Ontologie spatiale_ : voir `configuration/.agents/AGENT_GOVERNANCE.adoc`
 _DAG_ : N2 — Plugin Gradle d'acquisition de documents (Regle 4bis)
 
 _Derniere mise a jour_ : 2026-05-10
-_Session terminee_ : 010 ✅ (CDX-5 exportKnowledgeBase TERMINÉ)
-_Session precedente_ : 009 ✅ (CDX-4 chunkDocument TERMINÉ)
+_Session terminee_ : 011 ✅ (CDX-6 OSS/CSS routing licence TERMINÉ)
+_Session precedente_ : 010 ✅ (CDX-5 exportKnowledgeBase TERMINÉ)
 
 '''
 == REGLES ABSOLUES (resume)
@@ -35,6 +35,7 @@ _Session precedente_ : 009 ✅ (CDX-4 chunkDocument TERMINÉ)
 | 008 | 2026-05-10 | impl | CDX-3 — convertToMarkdown (AsciiDoc → Markdown) | —
 | 009 | 2026-05-10 | impl | CDX-4 — chunkDocument (chunking sémantique par section) | —
 | 010 | 2026-05-10 | impl | CDX-5 — exportKnowledgeBase (JSON-L/Markdown/AsciiDoc export) | —
+| 011 | 2026-05-10 | impl | CDX-6 — arborescence OSS/CSS + routing licence | —
 |===
 
 '''
@@ -50,7 +51,7 @@ _Session precedente_ : 009 ✅ (CDX-4 chunkDocument TERMINÉ)
 | CDX-3 | Task `convertToMarkdown` avec blocs de code | ✅ TERMINE | P0
 | CDX-4 | Task `chunkDocument` — stratégie sémantique | ✅ TERMINE | P0
 | CDX-5 | Task `exportKnowledgeBase` — JSON-L / Markdown / AsciiDoc | ✅ TERMINE | P1
-| CDX-6 | Intégration arborescence OSS/CSS + routing licence | A FAIRE | P1
+| CDX-6 | Intégration arborescence OSS/CSS + routing licence | ✅ TERMINE | P1
 | CDX-7 | Tests unitaires + intégration | A FAIRE | P1
 | CDX-8 | `codexIngest` → pgvector | A FAIRE | P2
 | CDX-9 | `codex-epub` — implémentation EPUB | A FAIRE | P3
@@ -72,7 +73,7 @@ _Session precedente_ : 009 ✅ (CDX-4 chunkDocument TERMINÉ)
 | `settings.gradle.kts` | ✅ rootProject + include doc-pipeline
 | `buildSrc/` | ✅ Convention plugin + catalog buildSrc
 | `doc-pipeline/build.gradle.kts` | ✅ Dependances + publication
-| `doc-pipeline/src/main/` | ✅ CodexPlugin.kt + ExtractTextTask.kt + ExtractBookStructureTask.kt + AsciiDocToJsonLddTask.kt + ImportBookSqlTask.kt + ConvertToMarkdownTask.kt + ChunkDocumentTask.kt + ExportKnowledgeBaseTask.kt + DocNode.kt + FontStyle.kt
+| `doc-pipeline/src/main/` | ✅ CodexPlugin.kt + CodexExtension.kt + LicenseZoneDetector.kt + ExtractTextTask.kt + ExtractBookStructureTask.kt + AsciiDocToJsonLddTask.kt + ImportBookSqlTask.kt + ConvertToMarkdownTask.kt + ChunkDocumentTask.kt + ExportKnowledgeBaseTask.kt + DocNode.kt + FontStyle.kt
 | `doc-pipeline/src/test/` | ✅ ExtractBookStructureTaskTest.kt (10/10 PASS)
 |===
 

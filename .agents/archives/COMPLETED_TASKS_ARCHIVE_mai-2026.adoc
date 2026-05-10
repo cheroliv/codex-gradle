@@ -69,3 +69,13 @@ multi-format. JSON-L (@context schema.org, @graph URN), Markdown (hiérarchie #,
 AsciiDoc (=/==, [source,text], [TIP], '''). Tri sémantique par sectionSortKey (numéros paddés).
 *Livrables* : `ExportKnowledgeBaseTask.kt`, `CodexPlugin.kt` (7 tâches), `010-cdx5-export-knowledge-base.adoc` (rapport).
 *Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` BUILD SUCCESSFUL, 0 warnings.
+
+'''
+== CDX-6 — arborescence OSS/CSS + routing licence (2026-05-10)
+
+*Session* : 011
+*Type* : implementation
+*Détail* : LicenseZoneDetector (détection foundry/OSS/ → Apache-2.0, foundry/CSS/ → PROPRIETARY),
+CodexExtension (extension Gradle codex { zone }), propagation automatique dans DocumentChunk.license.
+*Livrables* : `LicenseZoneDetector.kt`, `CodexExtension.kt`, `CodexPlugin.kt` modifié, `ChunkDocumentTask.kt` modifié, `011-cdx6-oss-css-licence.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` + compileTestKotlin BUILD SUCCESSFUL, 0 warnings.

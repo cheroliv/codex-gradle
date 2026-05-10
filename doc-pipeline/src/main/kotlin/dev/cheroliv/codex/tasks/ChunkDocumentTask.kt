@@ -5,6 +5,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -38,6 +40,9 @@ abstract class ChunkDocumentTask : DefaultTask() {
     @get:OutputFile
     abstract val chunksFile: RegularFileProperty
 
+    @get:Input
+    abstract val licenseName: Property<String>
+
     @TaskAction
     fun chunk() {
         val input = markdownFile.asFile.get()
@@ -47,7 +52,9 @@ abstract class ChunkDocumentTask : DefaultTask() {
 
         val sourceDocument = input.nameWithoutExtension
         val text = input.readText()
-        val chunks = buildChunks(text, sourceDocument)
+        val license = licenseName.get()
+        logger.lifecycle("[codex]   Licence détectée : $license")
+        val chunks = buildChunks(text, sourceDocument, license)
 
         @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
         val json = Json {
@@ -62,7 +69,7 @@ abstract class ChunkDocumentTask : DefaultTask() {
         )
     }
 
-    private fun buildChunks(text: String, sourceDocument: String): List<DocumentChunk> {
+    private fun buildChunks(text: String, sourceDocument: String, license: String): List<DocumentChunk> {
         val lines = text.lines()
         val headingPattern = Regex("""^(#{1,6})\s+(.+)$""")
 
@@ -130,7 +137,7 @@ abstract class ChunkDocumentTask : DefaultTask() {
                     codeBlocks = codeBlocks,
                     entities = emptyList(),
                     overlapNext = nextContent,
-                    license = "UNKNOWN"
+                    license = license
                 )
             )
         }
