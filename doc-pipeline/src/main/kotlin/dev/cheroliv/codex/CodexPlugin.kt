@@ -3,6 +3,7 @@ package dev.cheroliv.codex
 import dev.cheroliv.codex.tasks.AsciiDocToJsonLddTask
 import dev.cheroliv.codex.tasks.ChunkDocumentTask
 import dev.cheroliv.codex.tasks.ConvertToMarkdownTask
+import dev.cheroliv.codex.tasks.ExportKnowledgeBaseTask
 import dev.cheroliv.codex.tasks.ExtractBookStructureTask
 import dev.cheroliv.codex.tasks.ExtractTextTask
 import dev.cheroliv.codex.tasks.ImportBookSqlTask
@@ -60,6 +61,14 @@ class CodexPlugin : Plugin<Project> {
         ) {
             it.group = GROUP
             it.description = "Decoupe un document Markdown en chunks semantiques par section (1 chunk par heading)"
+        }
+
+        project.tasks.register(
+            "exportKnowledgeBase",
+            ExportKnowledgeBaseTask::class.java
+        ) {
+            it.group = GROUP
+            it.description = "Agrege les chunks en base de connaissance multi-format (JSON-L, Markdown, AsciiDoc)"
         }
     }
 

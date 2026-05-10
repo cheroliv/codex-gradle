@@ -1,0 +1,68 @@
+= Rapport Session 010 — CDX-5 : exportKnowledgeBase
+:author: cheroliv + opencode (deepseek-v4-pro:cloud)
+:date: 2026-05-10
+:session: 010
+:epic: CDX-5
+:status: ✅ TERMINÉ
+
+== Objectif
+
+Création de la task `exportKnowledgeBase` — agrégation des chunks en base de connaissance
+multi-format (JSON-L, Markdown, AsciiDoc).
+
+== Livrables
+
+=== 1. ExportKnowledgeBaseTask.kt (215 lignes)
+
+Agrégation chunks → 3 formats cohérents :
+
+*JSON-L* :
+- `@context` schema.org/codex avec `isPartOf` mapping
+- `@graph` avec `@id` URN (`urn:codex:chk-xxxxxxxx`)
+- `@type: DocumentChunk`, champs : sectionPath, headingLevel, text, codeBlocks, entities, license
+
+*Markdown* :
+- Hiérarchie `#`/`##`/`###` reconstruite depuis sectionPath
+- Code blocks en ```text ... ``` 
+- Overlap en `> _Suite : ..._` blockquote
+- Séparateurs `---` entre chapitres (headingLevel 1)
+
+*AsciiDoc* :
+- `=`/`==`/`===` hiérarchie
+- `[source,text]` + `----` pour code blocks
+- `[TIP]` pour overlap
+- Séparateurs `'''` entre sections
+
+Tri sémantique : sectionSortKey avec numéros paddés (1.2 → 0001.0002)
+
+=== 2. CodexPlugin mis à jour
+
+7 tâches enregistrées : extractText, extractBookStructure, asciiDocToJsonLdd,
+importBookSql, convertToMarkdown, chunkDocument, **exportKnowledgeBase**.
+
+== Fichiers produits/modifiés
+
+|===
+| Fichier | Action | Lignes
+| `doc-pipeline/src/main/kotlin/.../ExportKnowledgeBaseTask.kt` | Créé | 215
+| `doc-pipeline/src/main/kotlin/.../CodexPlugin.kt` | Modifié (+import +register) | 78
+|===
+
+== Vérification
+
+* `./gradlew :doc-pipeline:compileKotlin` → BUILD SUCCESSFUL (0 warnings)
+* Zéro secret détecté
+* Tests non lancés (règle : pas de test sans permission)
+
+== Pipeline codex — État consolidé
+
+PDF → extractBookStructure (.adoc) → asciiDocToJsonLdd (JSON LDD) → importBookSql (SQL)
+                                                                    → convertToMarkdown (.md)
+                                                                    → chunkDocument (JSON chunks)
+                                                                    → exportKnowledgeBase (JSON-L/.md/.adoc)
+
+Chaîne : CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅
+Prochain : CDX-6 — intégration arborescence OSS/CSS + routing licence (P1)
+
+[.text-right]
+*Rapport créé le 10 mai 2026 — Session 010 CDX-5 terminée.*

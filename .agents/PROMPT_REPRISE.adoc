@@ -1,15 +1,15 @@
-= PROMPT_REPRISE — Session 010 — Codex Gradle
+= PROMPT_REPRISE — Session 011 — Codex Gradle
 :author: cheroliv + opencode (deepseek-v4-pro)
 :date: 2026-05-10
-:session: 009
-:prochaine: 010
+:session: 010
+:prochaine: 011
 
 [abstract]
 Amorçage pour la prochaine session opencode.
 
 == Contexte de Reprise (EAGER)
 
-=== Ce qui a été accompli — Sessions 000→009
+=== Ce qui a été accompli — Sessions 000→010
 
 - Session 000 : Bootstrap gouvernance agent + scaffold plugin ✅
 - Session 001 : Design JSON LDD, SQL LMD, Cartographie Ontologique ✅
@@ -21,47 +21,55 @@ Amorçage pour la prochaine session opencode.
 - Session 007 : CDX-2 — détection typographique → hiérarchie multi-niveaux + code ✅
 - Session 008 : CDX-3 — convertToMarkdown (Asciidoctor → Markdown) ✅
 - Session 009 : CDX-4 — chunkDocument (chunking sémantique par section) ✅
+- Session 010 : CDX-5 — exportKnowledgeBase (JSON-L/Markdown/AsciiDoc export) ✅
 
-Chaîne CDX-1+2+3+4 validée : PDF → AsciiDoc → JSON LDD → SQL / Markdown → chunks JSON.
-Plugin enregistre 6 tâches. Compile OK.
+Chaîne complète CDX-1→5 validée : PDF → AsciiDoc → JSON LDD → SQL / Markdown → chunks JSON → knowledge base multi-format.
+Plugin enregistre 7 tâches. Compile OK.
 
 === État du code source
 
 [source]
 ----
 doc-pipeline/src/main/kotlin/dev/cheroliv/codex/
-├── CodexPlugin.kt                          # 6 tâches enregistrées
+├── CodexPlugin.kt                          # 7 tâches enregistrées
 └── tasks/
     ├── ExtractTextTask.kt                  # CDX-0
     ├── ExtractBookStructureTask.kt         # CDX-1a + CDX-2
     ├── AsciiDocToJsonLddTask.kt            # CDX-1b
     ├── ImportBookSqlTask.kt                # CDX-1c
     ├── ConvertToMarkdownTask.kt            # CDX-3
-    ├── ChunkDocumentTask.kt                # CDX-4 ✅ 217 lignes
+    ├── ChunkDocumentTask.kt                # CDX-4 ✅
+    ├── ExportKnowledgeBaseTask.kt          # CDX-5 ✅ 215 lignes
     ├── DocNode.kt                          # Type partagé
     └── FontStyle.kt                        # FontStyleDetector + enum
 
-doc-pipeline/src/test/kotlin/.../
-└── ExtractBookStructureTaskTest.kt         # 10/10 PASS
+doc-pipeline/src/test/
+├── ExtractBookStructureTaskTest.kt         # 10/10 PASS
+├── ExtractTextTaskTest.kt
+├── ConvertToMarkdownTaskTest.kt
+├── AsciiDocToJsonLddTaskTest.kt
+├── ImportBookSqlTaskTest.kt
+└── CodexPluginTest.kt
 ----
 
-== Mission du Jour — Session 010
+== Mission du Jour — Session 011
 
-=== Objectif prioritaire : CDX-5 — Task `exportKnowledgeBase`
+=== Objectif prioritaire : CDX-6 — Intégration arborescence OSS/CSS + routing licence
 
-Export structuré multi-formats depuis chunks :
-- Formats : JSON-L (Linked Data), Markdown, AsciiDoc
-- Agrégation chunks → document cohérent par format
-- Output : `build/codex/knowledge-base/` avec structure par livre/section
+Détection automatique de la zone (OSS vs CSS) et routage des licences :
+- Zone OSS → Apache 2.0, publié sur Sonatype
+- Zone CSS → Propriétaire, repo GitHub privé, pas de copyleft
+- Détection basée sur le chemin physique (foundry/OSS/ vs foundry/CSS/)
+- Intégration dans le pipeline : les métadonnées de zone dans DocumentChunk.license
 
 === Roadmap
 
 |===
 | EPIC | Description | Priorité
-| CDX-5 | `exportKnowledgeBase` — JSON-L / Markdown / AsciiDoc | P1
 | CDX-6 | Intégration arborescence OSS/CSS + routing licence | P1
 | CDX-7 | Tests unitaires + intégration | P1
 | CDX-8 | `codexIngest` → pgvector | P2
+| CDX-9 | `codex-epub` — implémentation EPUB | P3
 |===
 
 == Rappel — Règles Globales codex-gradle (EAGER)
@@ -74,5 +82,5 @@ Export structuré multi-formats depuis chunks :
 . Règle 6 : Procédure 6 étapes de fin de session obligatoire
 
 [.text-right]
-*PROMPT_REPRISE mis à jour le 10 mai 2026 — fin de session 009 (CDX-4).*
-*Prochaine session : 010 — CDX-5 exportKnowledgeBase.*
+*PROMPT_REPRISE mis à jour le 10 mai 2026 — fin de session 010 (CDX-5).*
+*Prochaine session : 011 — CDX-6 arborescence OSS/CSS.*

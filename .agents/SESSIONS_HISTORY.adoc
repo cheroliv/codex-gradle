@@ -250,3 +250,30 @@ PDF → extractBookStructure (.adoc) → asciiDocToJsonLdd (JSON LDD) → import
                                       → convertToMarkdown (.md) → chunkDocument (JSON chunks)
 
 Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅
+
+'''
+== Session 010 — CDX-5 : exportKnowledgeBase (JSON-L/Markdown/AsciiDoc export)
+
+*Date* : 2026-05-10
+*Type* : implementation
+*Modele* : deepseek-v4-pro:cloud (via opencode)
+*Score* : —
+
+*Objectif* :
+- Agrégation des chunks en base de connaissance multi-format
+
+*Livrables* :
+- `ExportKnowledgeBaseTask.kt` (215 lignes) :
+  - JSON-L : @context schema.org/codex, @graph avec URN, @type DocumentChunk
+  - Markdown : hiérarchie # reconstruite, code blocks ```, overlap blockquote
+  - AsciiDoc : hiérarchie =/==, [source,text], [TIP] overlap, séparateurs '''
+  - Tri sémantique avec numéros paddés (sectionSortKey)
+- `CodexPlugin.kt` : 7 tâches enregistrées (ajout exportKnowledgeBase)
+- Build compile OK, 0 warnings
+
+*Pipeline consolidé* :
+PDF → extractBookStructure (.adoc) → asciiDocToJsonLdd (JSON LDD) → importBookSql (SQL)
+                                      → convertToMarkdown (.md) → chunkDocument (JSON chunks)
+                                      → exportKnowledgeBase (JSON-L/.md/.adoc)
+
+Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅

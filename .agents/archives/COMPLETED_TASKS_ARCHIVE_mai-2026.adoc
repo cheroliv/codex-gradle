@@ -58,3 +58,14 @@ Data class DocumentChunk (id SHA-256, sectionPath, codeBlocks, overlap 2 phrases
 1 chunk par heading Markdown, sectionPath reconstruit depuis ancêtres, JSON kotlinx.serialization.
 *Livrables* : `ChunkDocumentTask.kt`, `CodexPlugin.kt` (6 tâches), `009-cdx4-chunk-document.adoc` (rapport).
 *Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` BUILD SUCCESSFUL, 0 warnings.
+
+'''
+== CDX-5 — exportKnowledgeBase (2026-05-10)
+
+*Session* : 010
+*Type* : implementation
+*Détail* : Création ExportKnowledgeBaseTask (215 lignes) — agrégation chunks en base de connaissance
+multi-format. JSON-L (@context schema.org, @graph URN), Markdown (hiérarchie #, ```, blockquote),
+AsciiDoc (=/==, [source,text], [TIP], '''). Tri sémantique par sectionSortKey (numéros paddés).
+*Livrables* : `ExportKnowledgeBaseTask.kt`, `CodexPlugin.kt` (7 tâches), `010-cdx5-export-knowledge-base.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` BUILD SUCCESSFUL, 0 warnings.
