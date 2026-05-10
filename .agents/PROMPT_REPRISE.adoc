@@ -1,84 +1,48 @@
-= PROMPT_REPRISE — Session 012 — Codex Gradle
-:author: cheroliv + opencode (deepseek-v4-pro)
+= PROMPT_REPRISE — codex-gradle
 :date: 2026-05-10
-:session: 011
-:prochaine: 012
+:session: 013 CDX-8 TERMINEE
+:prochaine_session: 014 — CDX-9 codex-epub
+:modele: deepseek-v4-pro:cloud
 
-[abstract]
-Amorçage pour la prochaine session opencode.
+== Contexte de la session precedente (013)
 
-== Contexte de Reprise (EAGER)
+CDX-8 `codexIngest` TERMINE. La tache vectorise les chunks JSON avec ONNX
+AllMiniLmL6V2 (384d) et les insere dans pgvector via R2DBC reactive.
 
-=== Ce qui a été accompli — Sessions 000→011
+- `CodexIngestTask.kt` (188 lignes) — schema `codex_documents`/`codex_chunks` avec `vector(384)`
+- `CodexExtension.kt` etendu avec 5 proprietes pgvector
+- 62/62 tests PASS
 
-- Session 000 : Bootstrap gouvernance agent + scaffold plugin ✅
-- Session 001 : Design JSON LDD, SQL LMD, Cartographie Ontologique ✅
-- Session 002 : Séparation des Concerns & Bouclage ✅
-- Session 003 : Le Vrai MVP — Boucle d'Autonomie ✅
-- Session 004 : Migration chemins foundry/ → foundry/OSS/ ✅
-- Session 005 : CDX-1b — asciiDocToJsonLdd via AsciidoctorJ AST ✅
-- Session 006 : CDX-1c — importBookSql (JSON LDD → DDL + INSERT PostgreSQL) ✅
-- Session 007 : CDX-2 — détection typographique → hiérarchie multi-niveaux + code ✅
-- Session 008 : CDX-3 — convertToMarkdown (Asciidoctor → Markdown) ✅
-- Session 009 : CDX-4 — chunkDocument (chunking sémantique par section) ✅
-- Session 010 : CDX-5 — exportKnowledgeBase (JSON-L/Markdown/AsciiDoc export) ✅
-- Session 011 : CDX-6 — arborescence OSS/CSS + routing licence ✅
+== Pipeline complet (8 taches codex)
 
-Pipeline complet (8 EPICs) : PDF → AsciiDoc → JSON LDD → SQL/Markdown → chunks → knowledge base.
-7 tâches enregistrées. Zone/licence détectée automatiquement au boot.
+PDF → extractBookStructure (.adoc) → asciiDocToJsonLdd (JSON LDD) → importBookSql (SQL)
+                                       → convertToMarkdown (.md) → chunkDocument (JSON chunks)
+                                                                 → exportKnowledgeBase (JSON-L/.md/.adoc)
+                                                                 → codexIngest (pgvector ONNX)
 
-=== État du code source
+Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅ | CDX-6 ✅ | CDX-7 ✅ | CDX-8 ✅
 
-[source]
+== Prochaine mission (Session 014 — CDX-9)
+
+- Implémentation EPUB — extraction texte + structure depuis fichiers `.epub`
+- Probablement via `org.apache.tika` (deja en dependances) ou via epub-specific parser
+- Reutiliser le meme pipeline (extractText → chunkDocument → codexIngest)
+- Ajouter `codex-epub/` comme sous-projet separate qui importe `codex` comme contrat
+
+== Commandes Gradle valides (STRATEGIE)
+
 ----
-doc-pipeline/src/main/kotlin/dev/cheroliv/codex/
-├── CodexPlugin.kt                          # 7 tâches + extension codex
-├── CodexExtension.kt                       # Extension codex { zone }
-├── LicenseZoneDetector.kt                  # OSS/CSS detection + licence routing
-└── tasks/
-    ├── ExtractTextTask.kt                  # CDX-0
-    ├── ExtractBookStructureTask.kt         # CDX-1a + CDX-2
-    ├── AsciiDocToJsonLddTask.kt            # CDX-1b
-    ├── ImportBookSqlTask.kt                # CDX-1c
-    ├── ConvertToMarkdownTask.kt            # CDX-3
-    ├── ChunkDocumentTask.kt                # CDX-4
-    ├── ExportKnowledgeBaseTask.kt          # CDX-5
-    ├── DocNode.kt                          # Type partagé
-    └── FontStyle.kt                        # FontStyleDetector + enum
+# Compiler
+./gradlew :doc-pipeline:compileKotlin
+
+# Tous les tests (62/62)
+./gradlew :doc-pipeline:test
 ----
 
-== Mission du Jour — Session 012
+== Configuration pgvector pour codexIngest
 
-=== Objectif prioritaire : CDX-7 — Tests unitaires + intégration
+Par defaut : `localhost:5432/codex` (user/pass: codex/codex).
+Configurable via `codex { pgvectorHost = "..." }` dans le build.gradle.kts
+ou via `-P` flags : `./gradlew codexIngest -PpgvectorHost=pg.example.com`.
 
-Tests pour les 7 tâches du pipeline :
-- ExtractTextTaskTest (existant, à compléter)
-- ExtractBookStructureTaskTest (10/10 PASS existant)
-- AsciiDocToJsonLddTaskTest (placeholder)
-- ImportBookSqlTaskTest (placeholder)
-- ConvertToMarkdownTaskTest (placeholder)
-- ChunkDocumentTaskTest (nouveau)
-- ExportKnowledgeBaseTaskTest (nouveau)
-- LicenceZoneDetectorTest (nouveau)
-
-=== Roadmap
-
-|===
-| EPIC | Description | Priorité
-| CDX-7 | Tests unitaires + intégration | P1
-| CDX-8 | `codexIngest` — vectorisation ONNX → pgvector | P2
-| CDX-9 | `codex-epub` — implémentation EPUB | P3
-|===
-
-== Rappel — Règles Globales codex-gradle (EAGER)
-
-. Règle 1 : Aucun commit sans permission explicite
-. Règle 2 : Pas de publishToMavenLocal automatique
-. Règle 3 : Secrets via configuration/ — jamais en dur dans build.gradle.kts
-. Règle 4 : Codex est le contrat — types partagés dans codex/
-. Règle 5 : DAG N2 — importable par N3 engine
-. Règle 6 : Procédure 6 étapes de fin de session obligatoire
-
-[.text-right]
-*PROMPT_REPRISE mis à jour le 10 mai 2026 — fin de session 011 (CDX-6).*
-*Prochaine session : 012 — CDX-7 tests unitaires.*
+== Aucun blocage connu. Ready pour CDX-9.

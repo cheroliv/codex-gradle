@@ -17,6 +17,12 @@ asciidoctorj = "3.0.0"
 jackson = "2.18.2"
 kotlinx-serial = "1.7.3"
 
+# ── RAG/Embedding — ONNX pgvector ──────────────────────────────────────────────
+langchain4j = "1.12.2"
+langchain4j-beta = "1.12.2-beta22"
+r2dbc-postgresql = "1.0.7.RELEASE"
+kotlinx-coroutines = "1.9.0"
+
 # ── Coverage ───────────────────────────────────────────────────────────────────
 kover = "0.9.1"
 
@@ -39,6 +45,15 @@ asciidoctorj = { module = "org.asciidoctor:asciidoctorj", version.ref = "asciido
 jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
 jackson-dataformat-yaml = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serial" }
+
+# ── RAG/Embedding — ONNX pgvector ──────────────────────────────────────────────
+langchain4j = { module = "dev.langchain4j:langchain4j", version.ref = "langchain4j" }
+langchain4j-minilm = { module = "dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2", version.ref = "langchain4j-beta" }
+r2dbc-postgresql = { module = "org.postgresql:r2dbc-postgresql", version.ref = "r2dbc-postgresql" }
+r2dbc-pool = { module = "io.r2dbc:r2dbc-pool", version = "1.0.2.RELEASE" }
+r2dbc-spi = { module = "io.r2dbc:r2dbc-spi", version = "1.0.0.RELEASE" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-reactive = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactive", version.ref = "kotlinx-coroutines" }
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }

@@ -29,6 +29,15 @@ dependencies {
     implementation(libs.jackson.module.kotlin)
     implementation(libs.jackson.dataformat.yaml)
 
+    // RAG/Embedding — ONNX pgvector (R2DBC)
+    implementation(libs.langchain4j)
+    implementation(libs.langchain4j.minilm)
+    implementation(libs.r2dbc.postgresql)
+    implementation(libs.r2dbc.pool)
+    implementation(libs.r2dbc.spi)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.reactive)
+
     testImplementation(libs.junit.jupiter)
     testImplementation(gradleTestKit())
     testRuntimeOnly(libs.junit.platform.launcher)

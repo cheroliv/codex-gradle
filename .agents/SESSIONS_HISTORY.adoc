@@ -301,3 +301,66 @@ Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅
 Zone/licence détectée au boot du plugin. Chaque chunk porte la licence correcte.
 
 Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅ | CDX-6 ✅
+
+'''
+== Session 012 — CDX-7 : Tests unitaires + integration
+
+*Date* : 2026-05-10
+*Type* : test
+*Modele* : deepseek-v4-pro:cloud (via opencode)
+*Score* : 62/62 PASS
+
+*Objectif* :
+- Couvrir les 7 taches du pipeline codex avec des tests unitaires
+
+*Livrables* :
+- `LicenseZoneDetectorTest.kt` (7 tests) : OSS/CSS/UNKNOWN detection + mapping licence
+- `ChunkDocumentTaskTest.kt` (11 tests) : multi-headings, single heading, no headings,
+  code blocks, deterministic IDs, section hierarchy, overlap, blank sections,
+  licence propagation, entities empty by default
+- `ExportKnowledgeBaseTaskTest.kt` (9 tests) : 3 formats output, JSON-L context/graph,
+  code blocks in JSON-L, Markdown hierarchy, overlap hints, AsciiDoc structure, sorting
+- `CodexPluginTest.kt` mis a jour : 5→7 taches (4 tests), ajout test extension codex { zone }
+- `AsciiDocToJsonLddTaskTest.kt` corrige : assertions compatibles comportement reel AsciidoctorJ
+- `ConvertToMarkdownTaskTest.kt` corrige : code blocks, images, liens
+
+*Resultat* : 9 classes de test, 62 tests, 0 failure, 0 skipped
+
+*Decisions cles* :
+- Tests bases sur ProjectBuilder + fichiers temporaires (integration legere sans mock)
+- Couverture systematique des cas edge (empty, single, no-heading, blank sections)
+- Assertions corrigees pour les tests existants qui supposaient un comportement different du reel
+
+Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅ | CDX-6 ✅ | CDX-7 ✅
+
+'''
+== Session 013 — CDX-8 : codexIngest (vectorisation ONNX → pgvector R2DBC)
+
+*Date* : 2026-05-10
+*Type* : implementation
+*Modele* : deepseek-v4-pro:cloud (via opencode)
+*Score* : 62/62 PASS
+
+*Objectif* :
+- Vectoriser les chunks JSON avec ONNX AllMiniLmL6V2 (384d) et stocker dans pgvector via R2DBC
+
+*Livrables* :
+- `CodexIngestTask.kt` (188 lignes) : connexion R2DBC reactive, schema codex_documents/codex_chunks
+  vector(384), groupement par sourceDocument, computeEmbedding via AllMiniLmL6V2EmbeddingModel
+- `CodexExtension.kt` etendu : 5 proprietes pgvector (host, port, database, user, password)
+- `gradle/libs.versions.toml` : LangChain4j, R2DBC, coroutines
+- `doc-pipeline/build.gradle.kts` : dependances ONNX + R2DBC
+- `CodexPlugin.kt` : registration codexIngest + conventions par defaut
+- `CodexPluginTest.kt` : 7→8 taches, 62/62 PASS
+
+*Decisions cles* :
+- R2DBC reactive (pas JDBC) — demande explicite utilisateur
+- Schema pgvector dedie aux chunks livresques (sourceDocument, sectionPath, headingLevel, license)
+- Embeddings 1 par 1 — volume documentaire actuel ne justifie pas le batching
+
+*Pipeline complet (8 taches)* :
+PDF → extractBookStructure → asciiDocToJsonLdd → importBookSql
+                           → convertToMarkdown → chunkDocument → exportKnowledgeBase
+                                                                  → codexIngest (pgvector)
+
+Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅ | CDX-6 ✅ | CDX-7 ✅ | CDX-8 ✅

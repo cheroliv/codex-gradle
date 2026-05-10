@@ -2,6 +2,7 @@ package dev.cheroliv.codex
 
 import dev.cheroliv.codex.tasks.AsciiDocToJsonLddTask
 import dev.cheroliv.codex.tasks.ChunkDocumentTask
+import dev.cheroliv.codex.tasks.CodexIngestTask
 import dev.cheroliv.codex.tasks.ConvertToMarkdownTask
 import dev.cheroliv.codex.tasks.ExportKnowledgeBaseTask
 import dev.cheroliv.codex.tasks.ExtractBookStructureTask
@@ -20,6 +21,11 @@ class CodexPlugin : Plugin<Project> {
 
         val extension = project.extensions.create("codex", CodexExtension::class.java)
         extension.zone.convention(zone)
+        extension.pgvectorHost.convention("localhost")
+        extension.pgvectorPort.convention("5432")
+        extension.pgvectorDatabase.convention("codex")
+        extension.pgvectorUser.convention("codex")
+        extension.pgvectorPassword.convention("codex")
 
         project.tasks.register(
             "extractText",
@@ -76,6 +82,19 @@ class CodexPlugin : Plugin<Project> {
         ) {
             it.group = GROUP
             it.description = "Agrege les chunks en base de connaissance multi-format (JSON-L, Markdown, AsciiDoc)"
+        }
+
+        project.tasks.register(
+            "codexIngest",
+            CodexIngestTask::class.java
+        ) {
+            it.group = GROUP
+            it.description = "Vectorise les chunks avec ONNX AllMiniLmL6V2 et les stocke dans pgvector via R2DBC"
+            it.pgHost.convention(extension.pgvectorHost)
+            it.pgPort.convention(extension.pgvectorPort)
+            it.pgDatabase.convention(extension.pgvectorDatabase)
+            it.pgUser.convention(extension.pgvectorUser)
+            it.pgPassword.convention(extension.pgvectorPassword)
         }
     }
 

@@ -79,3 +79,33 @@ AsciiDoc (=/==, [source,text], [TIP], '''). Tri sémantique par sectionSortKey (
 CodexExtension (extension Gradle codex { zone }), propagation automatique dans DocumentChunk.license.
 *Livrables* : `LicenseZoneDetector.kt`, `CodexExtension.kt`, `CodexPlugin.kt` modifié, `ChunkDocumentTask.kt` modifié, `011-cdx6-oss-css-licence.adoc` (rapport).
 *Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` + compileTestKotlin BUILD SUCCESSFUL, 0 warnings.
+
+'''
+== CDX-7 — Tests unitaires + integration (2026-05-10)
+
+*Session* : 012
+*Type* : test
+*Detail* : Creation de 3 nouveaux fichiers de test (ChunkDocumentTaskTest 11 tests,
+ExportKnowledgeBaseTaskTest 9 tests, LicenseZoneDetectorTest 7 tests) +
+mise a jour CodexPluginTest (5→7 taches) + correction assertions des tests existants
+(AsciiDocToJsonLdd, ConvertToMarkdown) pour correspondre au comportement reel.
+*Livrables* : `LicenseZoneDetectorTest.kt`, `ChunkDocumentTaskTest.kt`, `ExportKnowledgeBaseTaskTest.kt`,
+`CodexPluginTest.kt` (mis a jour), `AsciiDocToJsonLddTaskTest.kt` (corrige),
+`ConvertToMarkdownTaskTest.kt` (corrige), `TEST_COVERAGE_ANALYSIS.adoc` (mis a jour),
+`012-cdx7-tests-unitaires.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:test` BUILD SUCCESSFUL. 62/62 PASS.
+
+'''
+== CDX-8 — codexIngest ONNX → pgvector R2DBC (2026-05-10)
+
+*Session* : 013
+*Type* : implementation
+*Detail* : Creation CodexIngestTask (188 lignes) — connexion R2DBC reactive,
+schema pgvector codex_documents/codex_chunks avec vector(384), groupement par
+sourceDocument, computeEmbedding ONNX AllMiniLmL6V2. Ajout LangChain4j + R2DBC
++ coroutines dans version catalog et build.gradle.kts. Extension CodexExtension
+avec 5 proprietes pgvector. Registration codexIngest dans CodexPlugin (8 taches).
+*Livrables* : `CodexIngestTask.kt`, `CodexExtension.kt` (extendu), `doc-pipeline/build.gradle.kts`
+(modifie), `gradle/libs.versions.toml` (modifie), `CodexPlugin.kt` (modifie),
+`CodexPluginTest.kt` (7→8 taches), `013-cdx8-codexIngest.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` + `:doc-pipeline:test` BUILD SUCCESSFUL. 62/62 PASS.
