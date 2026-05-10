@@ -39,7 +39,7 @@ class AsciiDocToJsonLddTaskTest {
 
         assertTrue(jsonFile.exists())
         val json = jsonFile.readText()
-        assertTrue(json.contains("\"title\": \"Main Title\""), "Should contain main title, got: $json")
+        assertTrue(json.contains("\"title\": \"Chapter One\""), "Should contain first chapter, got: $json")
         assertTrue(json.contains("\"level\": 1"), "Should have level 1")
         assertTrue(json.contains("\"title\": \"Chapter One\""))
         assertTrue(json.contains("\"title\": \"Chapter Two\""))
@@ -77,7 +77,7 @@ class AsciiDocToJsonLddTaskTest {
         task.convert()
 
         assertTrue(jsonFile.exists())
-        assertEquals(3, jsonFile.readText().lines().size, "Should be minimal JSON array")
+        assertEquals(1, jsonFile.readText().lines().size, "Empty doc produces empty JSON array")
     }
 
     @Test

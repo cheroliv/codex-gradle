@@ -1,38 +1,42 @@
 = TEST_COVERAGE_ANALYSIS — codex-gradle
 :date: 2026-05-10
-:session: 007
+:session: 013
 
-== Couverture par Classe
-
-|===
-| Classe | Tests | Couverture
-| `FontStyleDetector` | 5 | ✅ Bold, Italic, Monospace, Normal, BoldItalic
-| `ExtractBookStructureTask` | 5 | ✅ Headers+code, Empty PDF, Monospace, Hiérarchie, Inline code
-| Total | 10 | 10/10 PASS
-|===
-
-== Scénarios Couverts
+== Couverture par Classe (62 tests, 9 classes)
 
 |===
-| Scénario | Test | Statut
-| Détection Bold | `detection bold font style from font name` | ✅
-| Détection Italic | `detection italic font style from font name` | ✅
-| Détection Monospace | `detection monospace font style from font name` | ✅
-| Détection Normal | `normal font returns normal style` | ✅
-| Détection BoldItalic | `bold italic font detected correctly` | ✅
-| Extraction complète | `extractBookStructure produces AsciiDoc with headers and code block` | ✅
-| Document vide | `empty PDF returns empty document marker` | ✅
-| Bloc de code | `monospace detection triggers code blocks even with short code` | ✅
-| Hiérarchie | `header hierarchy reflects font size and boldness` | ✅
-| Code inline | `single line monospace becomes inline code` | ✅
+| Classe | Tests | Statut
+| `CodexPluginTest` | 4 | ✅ 8 taches + types + groupe codex + extension zone
+| `LicenseZoneDetectorTest` | 7 | ✅ OSS/CSS/UNKNOWN detection + Apache-2.0/PROPRIETARY mapping
+| `ExtractTextTaskTest` | 3 | ✅ Simple PDF, multi-ligne, empty PDF
+| `ExtractBookStructureTaskTest` | 10 | ✅ Bold/Italic/Monospace/Normal/BoldItalic detection,
+  Headers+code block, Empty PDF, Monospace code, Hierarchy, Inline code
+| `AsciiDocToJsonLddTaskTest` | 4 | ✅ Simple hierarchy, Paragraphs, Empty doc, Nested children
+| `ImportBookSqlTaskTest` | 4 | ✅ DDL+INSERT, Correct titles, Paragraph INSERT, Empty array
+| `ConvertToMarkdownTaskTest` | 10 | ✅ Headers, Code blocks, Admonitions, Tables, Images,
+  Links, Lists, Inline formatting, Comments, Empty doc
+| `ChunkDocumentTaskTest` | 11 | ✅ Multi-headings, Single heading, No headings, Code blocks,
+  Deterministic IDs, Section hierarchy, Overlap, Last-section null, Blank sections,
+  Licence propagation, Empty entities
+| `ExportKnowledgeBaseTaskTest` | 9 | ✅ 3 formats, JSON-L context/graph, Code blocks in JSON-L,
+  Markdown hierarchy, Overlap hints, AsciiDoc structure, Code blocks in AsciiDoc,
+  Sorting, headingLevel=0
+| TODO | `CodexIngestTaskTest` | A CREER (session suivante)
 |===
 
-== Non Couvert
+== Couverture des Taches (8 taches enregistrees)
 
-* `ExtractTextTask` — pas de tests (pas modifié en session 007)
-* `AsciiDocToJsonLddTask` — pas de tests (non modifié)
-* `ImportBookSqlTask` — pas de tests (test manuel bout-en-bout en session 006)
-* `CodexPlugin` — pas de tests unitaires (couvert implicitement par les tests de tasks)
+|===
+| Tache | Classe | Testee
+| `extractText` | ExtractTextTask | ✅ 3 tests
+| `extractBookStructure` | ExtractBookStructureTask | ✅ 10 tests
+| `asciiDocToJsonLdd` | AsciiDocToJsonLddTask | ✅ 4 tests
+| `importBookSql` | ImportBookSqlTask | ✅ 4 tests
+| `convertToMarkdown` | ConvertToMarkdownTask | ✅ 10 tests
+| `chunkDocument` | ChunkDocumentTask | ✅ 11 tests
+| `exportKnowledgeBase` | ExportKnowledgeBaseTask | ✅ 9 tests
+| `codexIngest` | CodexIngestTask | ❌ Pas de test (R2DBC necessite pgvector en ligne — TestContainers a venir)
+|===
 
 [.text-right]
-*Analyse créée le 10 mai 2026 — Session 007 CDX-2.*
+*Analyse mise a jour le 10 mai 2026 — Session 013 CDX-8.*

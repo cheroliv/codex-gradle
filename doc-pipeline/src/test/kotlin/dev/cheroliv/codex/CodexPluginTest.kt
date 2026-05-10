@@ -1,7 +1,10 @@
 package dev.cheroliv.codex
 
 import dev.cheroliv.codex.tasks.AsciiDocToJsonLddTask
+import dev.cheroliv.codex.tasks.ChunkDocumentTask
+import dev.cheroliv.codex.tasks.CodexIngestTask
 import dev.cheroliv.codex.tasks.ConvertToMarkdownTask
+import dev.cheroliv.codex.tasks.ExportKnowledgeBaseTask
 import dev.cheroliv.codex.tasks.ExtractBookStructureTask
 import dev.cheroliv.codex.tasks.ExtractTextTask
 import dev.cheroliv.codex.tasks.ImportBookSqlTask
@@ -13,7 +16,7 @@ import org.junit.jupiter.api.Test
 class CodexPluginTest {
 
     @Test
-    fun `plugin registers all 5 tasks`() {
+    fun `plugin registers all 8 tasks`() {
         val project = ProjectBuilder.builder().build()
         project.plugins.apply("com.cheroliv.codex.doc-pipeline")
 
@@ -32,6 +35,15 @@ class CodexPluginTest {
 
         val convertToMarkdown = project.tasks.findByName("convertToMarkdown")
         assertNotNull(convertToMarkdown, "convertToMarkdown task should be registered")
+
+        val chunkDocument = project.tasks.findByName("chunkDocument")
+        assertNotNull(chunkDocument, "chunkDocument task should be registered")
+
+        val exportKnowledgeBase = project.tasks.findByName("exportKnowledgeBase")
+        assertNotNull(exportKnowledgeBase, "exportKnowledgeBase task should be registered")
+
+        val codexIngest = project.tasks.findByName("codexIngest")
+        assertNotNull(codexIngest, "codexIngest task should be registered")
     }
 
     @Test
@@ -44,6 +56,9 @@ class CodexPluginTest {
         assert(project.tasks.getByName("asciiDocToJsonLdd") is AsciiDocToJsonLddTask)
         assert(project.tasks.getByName("importBookSql") is ImportBookSqlTask)
         assert(project.tasks.getByName("convertToMarkdown") is ConvertToMarkdownTask)
+        assert(project.tasks.getByName("chunkDocument") is ChunkDocumentTask)
+        assert(project.tasks.getByName("exportKnowledgeBase") is ExportKnowledgeBaseTask)
+        assert(project.tasks.getByName("codexIngest") is CodexIngestTask)
     }
 
     @Test
@@ -54,6 +69,15 @@ class CodexPluginTest {
         project.tasks.filter { it.group == "codex" }.forEach { task ->
             assertEquals("codex", task.group, "${task.name} should be in codex group")
         }
-        assertEquals(5, project.tasks.count { it.group == "codex" })
+        assertEquals(8, project.tasks.count { it.group == "codex" })
+    }
+
+    @Test
+    fun `codex extension exposes zone property`() {
+        val project = ProjectBuilder.builder().build()
+        project.plugins.apply("com.cheroliv.codex.doc-pipeline")
+
+        val extension = project.extensions.findByType(CodexExtension::class.java)
+        assertNotNull(extension, "CodexExtension should be registered")
     }
 }
