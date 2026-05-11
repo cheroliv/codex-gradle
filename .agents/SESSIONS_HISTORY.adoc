@@ -398,3 +398,26 @@ PDF → extractBookStructure → asciiDocToJsonLdd → importBookSql
                                                                   → codexRetrieve (cosine similarity)
 
 Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅ | CDX-6 ✅ | CDX-7 ✅ | CDX-8 ✅ | CDX-9 ✅
+
+'''
+== Session 015 — CDX-CI : GitHub Actions CI/CD (`.github/workflows/test.yml`)
+
+*Date* : 2026-05-11
+*Type* : ci/cd
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : compile OK
+
+*Objectif* :
+- Créer le workflow GitHub Actions .github/workflows/test.yml pour CI/CD de codex-gradle
+- `./gradlew check` sur `:doc-pipeline`, JDK 24, avec `publishToMavenLocal` préalable
+
+*Livrables* :
+- `.github/workflows/test.yml` : trigger push/PR main/master, JDK 24 Temurin, ubuntu-latest, 15min
+- `./gradlew publishToMavenLocal` (préalable — plugin requis par le build)
+- `./gradlew :doc-pipeline:check` (compile + test + Kover coverage)
+- Build compile OK
+
+*Decisions cles* :
+- `publishToMavenLocal` obligatoire car le convention plugin buildSrc/ est dépendance du build
+- `:doc-pipeline:check` suffisant pour CI (compile + test + Kover coverage)
+- Pattern standard repris de graphify-gradle, engine, quizz-benchmark

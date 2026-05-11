@@ -1,0 +1,29 @@
+= Session 015 — CDX-CI : GitHub Actions CI/CD (`./gradlew check`)
+
+*Date* : 2026-05-11
+*Type* : ci/cd
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : compile OK
+
+*Objectif* :
+- Créer le workflow GitHub Actions .github/workflows/test.yml pour CI/CD de codex-gradle
+- `./gradlew check` sur le sous-projet `:doc-pipeline`
+- JDK 24, avec `publishToMavenLocal` préalable (le plugin est requis par le build)
+
+*Livrables* :
+- `.github/workflows/test.yml` : workflow CI standard
+  - JDK 24 Temurin, ubuntu-latest, timeout 15min
+  - `./gradlew publishToMavenLocal` (étape préalable obligatoire)
+  - `./gradlew :doc-pipeline:check` (compile + test + Kover coverage)
+- Build compile OK, 0 warnings
+
+*Décisions clés* :
+- `publishToMavenLocal` requis car le build `doc-pipeline/build.gradle.kts` reference
+  le convention plugin `codex.gradle-plugin-conventions` depuis buildSrc/
+  (et potentiellement d'autres sous-projets futurs)
+- `:doc-pipeline:check` plutôt que `build` : suffisant pour valider compile + tests + Kover
+- Pattern standard repris de graphify-gradle, engine, quizz-benchmark
+
+*Prochaine session* :
+- Voir PROMPT_REPRISE.adoc pour les options stratégiques (codex-epub, integration engine N3,
+  tests end-to-end pgvector, batching ONNX)

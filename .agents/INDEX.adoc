@@ -6,8 +6,8 @@ _Ontologie spatiale_ : voir `configuration/.agents/AGENT_GOVERNANCE.adoc`
 _DAG_ : N2 — Plugin Gradle d'acquisition de documents (Regle 4bis)
 
 _Derniere mise a jour_ : 2026-05-11
-_Session terminee_ : 014 ✅ (CDX-9 codexRetrieve TERMINÉ)
-_Session precedente_ : 013 ✅ (CDX-8 codexIngest TERMINÉ)
+_Session terminee_ : 015 ✅ (CDX-CI GitHub Actions TERMINÉ)
+_Session precedente_ : 014 ✅ (CDX-9 codexRetrieve TERMINÉ)
 
 '''
 == REGLES ABSOLUES (resume)
@@ -39,6 +39,7 @@ _Session precedente_ : 013 ✅ (CDX-8 codexIngest TERMINÉ)
 | 012 | 2026-05-10 | test | CDX-7 — Tests unitaires + integration (62/62 PASS) | ✅
 | 013 | 2026-05-10 | impl | CDX-8 — codexIngest ONNX → pgvector R2DBC | ✅
 | 014 | 2026-05-11 | impl | CDX-9 codexRetrieve — recherche sémantique cosine similarity | ✅
+| 015 | 2026-05-11 | ci/cd | CDX-CI — GitHub Actions test.yml (JDK 24, publishToMavenLocal + check) | ✅
 |===
 
 '''
@@ -58,6 +59,7 @@ _Session precedente_ : 013 ✅ (CDX-8 codexIngest TERMINÉ)
 | CDX-7 | Tests unitaires + intégration (62/62 PASS, 9 classes de test) | ✅ TERMINE | P1
 | CDX-8 | Task `codexIngest` — ONNX → pgvector R2DBC (schema codex_documents/codex_chunks, vector(384)) | ✅ TERMINE | P2
 | CDX-9 | Task `codexRetrieve` — cosine similarity dans pgvector → corpus requêtable | ✅ TERMINE | P2
+| CDX-CI | GitHub Actions CI/CD — `.github/workflows/test.yml`, JDK 24, publishToMavenLocal + check | ✅ TERMINE | P2
 |===
 
 '''

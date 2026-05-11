@@ -2,21 +2,22 @@
 :toc:
 
 _Date_ : 2026-05-11
-_Session terminee_ : 014 ✅ (CDX-9 codexRetrieve)
+_Session terminee_ : 015 ✅ (CDX-CI GitHub Actions)
 _Build_ : 64/64 PASS, compile clean 0 warning
+_CI/CD_ : `.github/workflows/test.yml` créé
 
 '''
-== Mission de la Session 015
+== Mission de la Session 016
 
 *[STRATEGIE]* La prochaine session pourra etre consacree a :
-- `codex-epub` — implementation EPUB (ancien CDX-9 dans roadmap, P3)
+- `codex-epub` — implementation EPUB (P3, ancien CDX-9 dans roadmap initiale)
 - Integration engine N3 : piping codexRetrieve → assembleCompositeContext
 - Ajout de tests d'integration end-to-end codexIngest + codexRetrieve avec
   pgvector reel (necessite PostgreSQL + pgvector local)
 - Optimisation : batching ONNX pour ingestion multi-documents
 
 '''
-== Etat du Pipeline (Session 014)
+== Etat du Pipeline (Session 015)
 
 9 taches enregistrees dans le groupe `codex` :
 
@@ -31,6 +32,8 @@ _Build_ : 64/64 PASS, compile clean 0 warning
 . codexRetrieve (cosine similarity → corpus requetable)
 
 10 classes de test, 64/64 PASS, 0 failure, 0 skipped.
+
+CI/CD : `.github/workflows/test.yml` — `publishToMavenLocal` + `:doc-pipeline:check` sur JDK 24.
 
 '''
 == Conventions pgvector
@@ -63,6 +66,9 @@ de ces conventions.
 
 # Tests
 ./gradlew :doc-pipeline:test
+
+# Check complet (compile + tests + Kover)
+./gradlew :doc-pipeline:check
 
 # Liste des taches
 ./gradlew :doc-pipeline:tasks --group codex

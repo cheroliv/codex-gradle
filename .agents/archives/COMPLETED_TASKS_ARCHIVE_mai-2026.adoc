@@ -124,3 +124,15 @@ chemin critique MVP0 : corpus documentaire desormais requetable.
 (modifie), `CodexPluginTest.kt` (8→9 taches), `INDEX.adoc` (mis a jour),
 `SESSIONS_HISTORY.adoc` (mis a jour).
 *Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` + `:doc-pipeline:test` BUILD SUCCESSFUL. 64/64 PASS.
+
+'''
+== CDX-CI — GitHub Actions CI/CD `.github/workflows/test.yml` (2026-05-11)
+
+*Session* : 015
+*Type* : ci/cd
+*Detail* : Creation du workflow GitHub Actions pour CI/CD de codex-gradle.
+JDK 24 Temurin, ubuntu-latest, timeout 15min. `publishToMavenLocal` prealable
+(plugin buildSrc requis par le build) + `:doc-pipeline:check` (compile + test + Kover).
+Trigger push/PR sur main/master.
+*Livrables* : `.github/workflows/test.yml`, `015-cdx-ci-github-workflow.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` BUILD SUCCESSFUL.
