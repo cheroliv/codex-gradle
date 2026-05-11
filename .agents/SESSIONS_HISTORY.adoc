@@ -364,3 +364,37 @@ PDF → extractBookStructure → asciiDocToJsonLdd → importBookSql
                                                                   → codexIngest (pgvector)
 
 Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅ | CDX-6 ✅ | CDX-7 ✅ | CDX-8 ✅
+
+'''
+== Session 014 — CDX-9 : codexRetrieve (recherche sémantique cosine similarity → corpus requêtable)
+
+*Date* : 2026-05-11
+*Type* : implementation
+*Modele* : deepseek-v4-pro:cloud (via opencode)
+*Score* : 64/64 PASS
+
+*Objectif* :
+- Brancher la sortie codex (PDF→texte→chunks) vers pgvector pour rendre le corpus requêtable
+- Dernier maillon du chemin critique MVP0
+
+*Livrables* :
+- `CodexRetrieveTask.kt` (145 lignes) : recherche cosine similarity via opérateur pgvector `<=>` sur `vector(384)`,
+  embedding ONNX AllMiniLmL6V2 de la query, JOIN codex_documents pour sourceDocument + licence,
+  sortie JSON structurée (RetrieveResult: chunkId, similarity, sectionPath, headingLevel, sourceDocument)
+- `CodexRetrieveTaskTest.kt` (2 tests) : registration + configurabilité des propriétés
+- `CodexPlugin.kt` : registration codexRetrieve (9e tâche, convention topK=10)
+- `CodexPluginTest.kt` : 8→9 taches, 62→64 PASS
+
+*Decisions cles* :
+- Opérateur `<=>` pgvector (cosine_distance = 1 - cosine_similarity) — standard PostgreSQL
+- Flux.from() + collectList() pour mapping réactif correct (R2DBC Result.map retourne Publisher<T>)
+- Cast `(row.get("chunk_index") as Number).toInt()` pour éviter `Integer` java.lang (warning Kotlin)
+- Sortie JSON @Serializable via RetrieveResult + codexRetrieve -PoutputFile pour piping vers engine N3
+
+*Pipeline complet (9 taches)* :
+PDF → extractBookStructure → asciiDocToJsonLdd → importBookSql
+                           → convertToMarkdown → chunkDocument → exportKnowledgeBase
+                                                                  → codexIngest (pgvector)
+                                                                  → codexRetrieve (cosine similarity)
+
+Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅ | CDX-6 ✅ | CDX-7 ✅ | CDX-8 ✅ | CDX-9 ✅

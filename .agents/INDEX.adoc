@@ -5,9 +5,9 @@ _Regles absolues_ : voir `AGENT.adoc`
 _Ontologie spatiale_ : voir `configuration/.agents/AGENT_GOVERNANCE.adoc`
 _DAG_ : N2 — Plugin Gradle d'acquisition de documents (Regle 4bis)
 
-_Derniere mise a jour_ : 2026-05-10
-_Session terminee_ : 013 ✅ (CDX-8 codexIngest TERMINÉ)
-_Session precedente_ : 012 ✅ (CDX-7 Tests unitaires + integration TERMINÉ)
+_Derniere mise a jour_ : 2026-05-11
+_Session terminee_ : 014 ✅ (CDX-9 codexRetrieve TERMINÉ)
+_Session precedente_ : 013 ✅ (CDX-8 codexIngest TERMINÉ)
 
 '''
 == REGLES ABSOLUES (resume)
@@ -38,6 +38,7 @@ _Session precedente_ : 012 ✅ (CDX-7 Tests unitaires + integration TERMINÉ)
 | 011 | 2026-05-10 | impl | CDX-6 — arborescence OSS/CSS + routing licence | —
 | 012 | 2026-05-10 | test | CDX-7 — Tests unitaires + integration (62/62 PASS) | ✅
 | 013 | 2026-05-10 | impl | CDX-8 — codexIngest ONNX → pgvector R2DBC | ✅
+| 014 | 2026-05-11 | impl | CDX-9 codexRetrieve — recherche sémantique cosine similarity | ✅
 |===
 
 '''
@@ -56,7 +57,7 @@ _Session precedente_ : 012 ✅ (CDX-7 Tests unitaires + integration TERMINÉ)
 | CDX-6 | Intégration arborescence OSS/CSS + routing licence | ✅ TERMINE | P1
 | CDX-7 | Tests unitaires + intégration (62/62 PASS, 9 classes de test) | ✅ TERMINE | P1
 | CDX-8 | Task `codexIngest` — ONNX → pgvector R2DBC (schema codex_documents/codex_chunks, vector(384)) | ✅ TERMINE | P2
-| CDX-9 | `codex-epub` — implémentation EPUB | A FAIRE | P3
+| CDX-9 | Task `codexRetrieve` — cosine similarity dans pgvector → corpus requêtable | ✅ TERMINE | P2
 |===
 
 '''
@@ -75,8 +76,8 @@ _Session precedente_ : 012 ✅ (CDX-7 Tests unitaires + integration TERMINÉ)
 | `settings.gradle.kts` | ✅ rootProject + include doc-pipeline
 | `buildSrc/` | ✅ Convention plugin + catalog buildSrc
 | `doc-pipeline/build.gradle.kts` | ✅ Dependances + publication
-| `doc-pipeline/src/main/` | ✅ CodexPlugin.kt + CodexExtension.kt + LicenseZoneDetector.kt + ExtractTextTask.kt + ExtractBookStructureTask.kt + AsciiDocToJsonLddTask.kt + ImportBookSqlTask.kt + ConvertToMarkdownTask.kt + ChunkDocumentTask.kt + ExportKnowledgeBaseTask.kt + DocNode.kt + FontStyle.kt
-| `doc-pipeline/src/test/` | ✅ CodexPluginTest.kt (4) + LicenseZoneDetectorTest.kt (7) + ExtractTextTaskTest.kt (3) + ExtractBookStructureTaskTest.kt (10) + AsciiDocToJsonLddTaskTest.kt (4) + ImportBookSqlTaskTest.kt (4) + ConvertToMarkdownTaskTest.kt (10) + ChunkDocumentTaskTest.kt (11) + ExportKnowledgeBaseTaskTest.kt (9) — 62/62 PASS
+| `doc-pipeline/src/main/` | ✅ CodexPlugin.kt + CodexExtension.kt + LicenseZoneDetector.kt + ExtractTextTask.kt + ExtractBookStructureTask.kt + AsciiDocToJsonLddTask.kt + ImportBookSqlTask.kt + ConvertToMarkdownTask.kt + ChunkDocumentTask.kt + ExportKnowledgeBaseTask.kt + CodexIngestTask.kt + CodexRetrieveTask.kt + DocNode.kt + FontStyle.kt
+| `doc-pipeline/src/test/` | ✅ CodexPluginTest.kt (4) + LicenseZoneDetectorTest.kt (7) + ExtractTextTaskTest.kt (3) + ExtractBookStructureTaskTest.kt (10) + AsciiDocToJsonLddTaskTest.kt (4) + ImportBookSqlTaskTest.kt (4) + ConvertToMarkdownTaskTest.kt (10) + ChunkDocumentTaskTest.kt (11) + ExportKnowledgeBaseTaskTest.kt (9) + CodexRetrieveTaskTest.kt (2) — 64/64 PASS
 |===
 
 '''

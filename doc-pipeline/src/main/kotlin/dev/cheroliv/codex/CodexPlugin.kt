@@ -3,6 +3,7 @@ package dev.cheroliv.codex
 import dev.cheroliv.codex.tasks.AsciiDocToJsonLddTask
 import dev.cheroliv.codex.tasks.ChunkDocumentTask
 import dev.cheroliv.codex.tasks.CodexIngestTask
+import dev.cheroliv.codex.tasks.CodexRetrieveTask
 import dev.cheroliv.codex.tasks.ConvertToMarkdownTask
 import dev.cheroliv.codex.tasks.ExportKnowledgeBaseTask
 import dev.cheroliv.codex.tasks.ExtractBookStructureTask
@@ -90,6 +91,20 @@ class CodexPlugin : Plugin<Project> {
         ) {
             it.group = GROUP
             it.description = "Vectorise les chunks avec ONNX AllMiniLmL6V2 et les stocke dans pgvector via R2DBC"
+            it.pgHost.convention(extension.pgvectorHost)
+            it.pgPort.convention(extension.pgvectorPort)
+            it.pgDatabase.convention(extension.pgvectorDatabase)
+            it.pgUser.convention(extension.pgvectorUser)
+            it.pgPassword.convention(extension.pgvectorPassword)
+        }
+
+        project.tasks.register(
+            "codexRetrieve",
+            CodexRetrieveTask::class.java
+        ) {
+            it.group = GROUP
+            it.description = "Recherche semantique cosine similarity dans pgvector — corpus documentaire requetable"
+            it.topK.convention("10")
             it.pgHost.convention(extension.pgvectorHost)
             it.pgPort.convention(extension.pgvectorPort)
             it.pgDatabase.convention(extension.pgvectorDatabase)

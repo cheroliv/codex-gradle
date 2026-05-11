@@ -109,3 +109,18 @@ avec 5 proprietes pgvector. Registration codexIngest dans CodexPlugin (8 taches)
 (modifie), `gradle/libs.versions.toml` (modifie), `CodexPlugin.kt` (modifie),
 `CodexPluginTest.kt` (7→8 taches), `013-cdx8-codexIngest.adoc` (rapport).
 *Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` + `:doc-pipeline:test` BUILD SUCCESSFUL. 62/62 PASS.
+
+'''
+== CDX-9 — codexRetrieve (recherche sémantique cosine similarity → pgvector, 2026-05-11)
+
+*Session* : 014
+*Type* : implementation
+*Detail* : Creation CodexRetrieveTask (145 lignes) — recherche cosine similarity via
+operateur pgvector `<=>` sur vector(384), embedding ONNX AllMiniLmL6V2 de la query,
+JOIN codex_documents pour sourceDocument + license, sortie JSON @Serializable RetrieveResult
+(chunkId, similarity, sectionPath, headingLevel, sourceDocument). Dernier maillon du
+chemin critique MVP0 : corpus documentaire desormais requetable.
+*Livrables* : `CodexRetrieveTask.kt`, `CodexRetrieveTaskTest.kt`, `CodexPlugin.kt`
+(modifie), `CodexPluginTest.kt` (8→9 taches), `INDEX.adoc` (mis a jour),
+`SESSIONS_HISTORY.adoc` (mis a jour).
+*Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` + `:doc-pipeline:test` BUILD SUCCESSFUL. 64/64 PASS.

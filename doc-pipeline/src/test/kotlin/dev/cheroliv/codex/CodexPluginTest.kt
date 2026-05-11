@@ -3,6 +3,7 @@ package dev.cheroliv.codex
 import dev.cheroliv.codex.tasks.AsciiDocToJsonLddTask
 import dev.cheroliv.codex.tasks.ChunkDocumentTask
 import dev.cheroliv.codex.tasks.CodexIngestTask
+import dev.cheroliv.codex.tasks.CodexRetrieveTask
 import dev.cheroliv.codex.tasks.ConvertToMarkdownTask
 import dev.cheroliv.codex.tasks.ExportKnowledgeBaseTask
 import dev.cheroliv.codex.tasks.ExtractBookStructureTask
@@ -16,7 +17,7 @@ import org.junit.jupiter.api.Test
 class CodexPluginTest {
 
     @Test
-    fun `plugin registers all 8 tasks`() {
+    fun `plugin registers all 9 tasks`() {
         val project = ProjectBuilder.builder().build()
         project.plugins.apply("com.cheroliv.codex.doc-pipeline")
 
@@ -44,6 +45,9 @@ class CodexPluginTest {
 
         val codexIngest = project.tasks.findByName("codexIngest")
         assertNotNull(codexIngest, "codexIngest task should be registered")
+
+        val codexRetrieve = project.tasks.findByName("codexRetrieve")
+        assertNotNull(codexRetrieve, "codexRetrieve task should be registered")
     }
 
     @Test
@@ -59,6 +63,7 @@ class CodexPluginTest {
         assert(project.tasks.getByName("chunkDocument") is ChunkDocumentTask)
         assert(project.tasks.getByName("exportKnowledgeBase") is ExportKnowledgeBaseTask)
         assert(project.tasks.getByName("codexIngest") is CodexIngestTask)
+        assert(project.tasks.getByName("codexRetrieve") is CodexRetrieveTask)
     }
 
     @Test
@@ -69,7 +74,7 @@ class CodexPluginTest {
         project.tasks.filter { it.group == "codex" }.forEach { task ->
             assertEquals("codex", task.group, "${task.name} should be in codex group")
         }
-        assertEquals(8, project.tasks.count { it.group == "codex" })
+        assertEquals(9, project.tasks.count { it.group == "codex" })
     }
 
     @Test

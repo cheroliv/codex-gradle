@@ -1,12 +1,12 @@
 = TEST_COVERAGE_ANALYSIS — codex-gradle
-:date: 2026-05-10
-:session: 013
+:date: 2026-05-11
+:session: 014
 
-== Couverture par Classe (62 tests, 9 classes)
+== Couverture par Classe (64 tests, 10 classes)
 
 |===
 | Classe | Tests | Statut
-| `CodexPluginTest` | 4 | ✅ 8 taches + types + groupe codex + extension zone
+| `CodexPluginTest` | 4 | ✅ 9 taches + types + groupe codex + extension zone
 | `LicenseZoneDetectorTest` | 7 | ✅ OSS/CSS/UNKNOWN detection + Apache-2.0/PROPRIETARY mapping
 | `ExtractTextTaskTest` | 3 | ✅ Simple PDF, multi-ligne, empty PDF
 | `ExtractBookStructureTaskTest` | 10 | ✅ Bold/Italic/Monospace/Normal/BoldItalic detection,
@@ -21,10 +21,11 @@
 | `ExportKnowledgeBaseTaskTest` | 9 | ✅ 3 formats, JSON-L context/graph, Code blocks in JSON-L,
   Markdown hierarchy, Overlap hints, AsciiDoc structure, Code blocks in AsciiDoc,
   Sorting, headingLevel=0
-| TODO | `CodexIngestTaskTest` | A CREER (session suivante)
+| `CodexRetrieveTaskTest` | 2 | ✅ Registration, Configurabilite (query, topK, pgHost, pgPort, pgDatabase, pgUser, pgPassword)
+| TODO | `CodexIngestTaskTest` | A CREER (session suivante — TestContainers pgvector)
 |===
 
-== Couverture des Taches (8 taches enregistrees)
+== Couverture des Taches (9 taches enregistrees)
 
 |===
 | Tache | Classe | Testee
@@ -36,7 +37,8 @@
 | `chunkDocument` | ChunkDocumentTask | ✅ 11 tests
 | `exportKnowledgeBase` | ExportKnowledgeBaseTask | ✅ 9 tests
 | `codexIngest` | CodexIngestTask | ❌ Pas de test (R2DBC necessite pgvector en ligne — TestContainers a venir)
+| `codexRetrieve` | CodexRetrieveTask | ✅ 2 tests
 |===
 
 [.text-right]
-*Analyse mise a jour le 10 mai 2026 — Session 013 CDX-8.*
+*Analyse mise a jour le 11 mai 2026 — Session 014 CDX-9.*

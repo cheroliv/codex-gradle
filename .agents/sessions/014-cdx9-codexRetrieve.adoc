@@ -1,0 +1,66 @@
+= Session 014 — CDX-9 codexRetrieve (recherche sémantique cosine similarity → corpus requêtable)
+:date: 2026-05-11
+:type: implementation
+:modele: deepseek-v4-pro:cloud (via opencode)
+:score: 64/64 PASS
+
+== Objectif
+
+Brancher la sortie codex (PDF→texte→chunks) vers pgvector pour rendre
+le corpus documentaire requêtable par le RAG. Dernier maillon du chemin
+critique MVP0.
+
+== Livrables
+
+- `CodexRetrieveTask.kt` (145 lignes) — tâche Gradle reactive :
+  * Embedding ONNX AllMiniLmL6V2 de la query
+  * Recherche cosine similarity via opérateur pgvector `<=>` (1 - cosine_similarity)
+  * JOIN codex_documents → sourceDocument + license
+  * Sortie JSON @Serializable `RetrieveResult` (chunkId, similarity, sectionPath, headingLevel, sourceDocument)
+  * `Flux.from()` + `collectList()` pour mapping réactif correct
+  * Cast `(row.get(key) as Number).toInt()` pour éviter `Integer` java.lang (warning Kotlin)
+- `CodexRetrieveTaskTest.kt` (2 tests) — registration + configurabilité propriétés
+- `CodexPlugin.kt` — registration `codexRetrieve` (9e tâche, convention topK=10)
+- `CodexPluginTest.kt` — 8→9 taches, 4 tests mis à jour
+- `INDEX.adoc` — roadmap CDX-9 ✅, sessions 014
+- `SESSIONS_HISTORY.adoc` — session 014 ajoutée
+- `COMPLETED_TASKS_ARCHIVE_mai-2026.adoc` — CDX-9 archivé
+
+== SQL de recherche
+
+[source,sql]
+----
+SELECT sub.chunk_id, sub.chunk_index, sub.chunk_text,
+       sub.section_path, sub.heading_level, sub.source_document,
+       1.0 - sub.distance AS similarity
+FROM (
+  SELECT c.id AS chunk_id, c.chunk_index, c.chunk_text,
+         c.section_path, c.heading_level, d.source_document,
+         c.embedding <=> $1::vector AS distance
+  FROM codex_chunks c
+  JOIN codex_documents d ON c.document_id = d.id
+  WHERE c.embedding IS NOT NULL
+) sub
+ORDER BY sub.distance ASC
+LIMIT $2
+----
+
+== Usage
+
+. `./gradlew chunkDocument -PinputMarkdown=foo.md`
+. `./gradlew codexIngest -PchunksFile=build/codex/chunks/foo.json`
+. `./gradlew codexRetrieve -Pquery="Qu'est-ce que..." -PtopK=5 -PoutputFile=results.json`
+
+== Pipeline complet (9 taches)
+
+PDF → extractBookStructure → asciiDocToJsonLdd → importBookSql
+                           → convertToMarkdown → chunkDocument → exportKnowledgeBase
+                                                                  → codexIngest (pgvector)
+                                                                  → codexRetrieve (cosine similarity)
+
+== Decisions cles
+
+- Opérateur `<=>` pgvector — standard PostgreSQL, pas de fonction custom
+- `Flux.from()` obligatoire car R2DBC `result.map()` retourne un `Publisher<T>`, pas un `Flux<T>` directement
+- Cast `Number.toInt()` recommandé par le compilateur Kotlin (pas `Integer::class.java`)
+- Sortie JSON structurée pour piping vers engine N3 via stdout/File

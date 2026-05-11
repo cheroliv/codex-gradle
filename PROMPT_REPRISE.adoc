@@ -1,0 +1,69 @@
+= PROMPT_REPRISE — codex-gradle
+:toc:
+
+_Date_ : 2026-05-11
+_Session terminee_ : 014 ✅ (CDX-9 codexRetrieve)
+_Build_ : 64/64 PASS, compile clean 0 warning
+
+'''
+== Mission de la Session 015
+
+*[STRATEGIE]* La prochaine session pourra etre consacree a :
+- `codex-epub` — implementation EPUB (ancien CDX-9 dans roadmap, P3)
+- Integration engine N3 : piping codexRetrieve → assembleCompositeContext
+- Ajout de tests d'integration end-to-end codexIngest + codexRetrieve avec
+  pgvector reel (necessite PostgreSQL + pgvector local)
+- Optimisation : batching ONNX pour ingestion multi-documents
+
+'''
+== Etat du Pipeline (Session 014)
+
+9 taches enregistrees dans le groupe `codex` :
+
+. extractText
+. extractBookStructure
+. asciiDocToJsonLdd
+. importBookSql
+. convertToMarkdown
+. chunkDocument
+. exportKnowledgeBase
+. codexIngest (ONNX → pgvector)
+. codexRetrieve (cosine similarity → corpus requetable)
+
+10 classes de test, 64/64 PASS, 0 failure, 0 skipped.
+
+'''
+== Conventions pgvector
+
+Le bloc `codex { }` dans le build.gradle.kts du projet consommateur
+expose les proprietes suivantes :
+
+[source,kotlin]
+----
+codex {
+    zone = LicenseZone.OSS
+    pgvectorHost = "localhost"
+    pgvectorPort = "5432"
+    pgvectorDatabase = "codex"
+    pgvectorUser = "codex"
+    pgvectorPassword = "codex"
+}
+----
+
+Les taches codexIngest et codexRetrieve heritent automatiquement
+de ces conventions.
+
+'''
+== Commandes rapides
+
+[source,bash]
+----
+# Compilation
+./gradlew :doc-pipeline:compileKotlin
+
+# Tests
+./gradlew :doc-pipeline:test
+
+# Liste des taches
+./gradlew :doc-pipeline:tasks --group codex
+----
