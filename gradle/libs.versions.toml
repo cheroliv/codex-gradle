@@ -18,8 +18,8 @@ jackson = "2.18.2"
 kotlinx-serial = "1.7.3"
 
 # ── RAG/Embedding — ONNX pgvector ──────────────────────────────────────────────
-langchain4j = "1.12.2"
-langchain4j-beta = "1.12.2-beta22"
+langchain4j = "1.14.1"
+langchain4j-beta = "1.14.1-beta24"
 r2dbc-postgresql = "1.0.7.RELEASE"
 kotlinx-coroutines = "1.9.0"
 
