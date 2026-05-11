@@ -2,27 +2,28 @@
 :toc:
 
 _Date_ : 2026-05-11
-_Session terminee_ : 015 ✅ (CDX-CI GitHub Actions)
-_Build_ : 64/64 PASS, compile clean 0 warning
-_CI/CD_ : `.github/workflows/test.yml` créé
+_Session terminee_ : 016 ✅ (CDX-10 codex-epub TERMINÉ)
+_Build_ : 70/70 PASS, compile clean 0 warning
+_CI/CD_ : `.github/workflows/test.yml`
 
 '''
-== Mission de la Session 016
+== Mission de la Session 017
 
 *[STRATEGIE]* La prochaine session pourra etre consacree a :
-- `codex-epub` — implementation EPUB (P3, ancien CDX-9 dans roadmap initiale)
 - Integration engine N3 : piping codexRetrieve → assembleCompositeContext
 - Ajout de tests d'integration end-to-end codexIngest + codexRetrieve avec
   pgvector reel (necessite PostgreSQL + pgvector local)
 - Optimisation : batching ONNX pour ingestion multi-documents
+- Ajout tache `codexEpub` composite ou auto-detection format
 
 '''
-== Etat du Pipeline (Session 015)
+== Etat du Pipeline (Session 016)
 
-9 taches enregistrees dans le groupe `codex` :
+10 taches enregistrees dans le groupe `codex` :
 
 . extractText
 . extractBookStructure
+. extractEpubStructure
 . asciiDocToJsonLdd
 . importBookSql
 . convertToMarkdown
@@ -31,7 +32,7 @@ _CI/CD_ : `.github/workflows/test.yml` créé
 . codexIngest (ONNX → pgvector)
 . codexRetrieve (cosine similarity → corpus requetable)
 
-10 classes de test, 64/64 PASS, 0 failure, 0 skipped.
+11 classes de test, 70/70 PASS, 0 failure, 0 skipped.
 
 CI/CD : `.github/workflows/test.yml` — `publishToMavenLocal` + `:doc-pipeline:check` sur JDK 24.
 

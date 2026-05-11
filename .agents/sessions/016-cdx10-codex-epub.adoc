@@ -1,0 +1,51 @@
+= Session 016 — CDX-10 : codex-epub (extraction EPUB via Tika → AsciiDoc)
+
+*Date* : 2026-05-11
+*Type* : implementation
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : 70/70 PASS
+
+*Objectif* :
+- Implémenter l'extraction EPUB dans le pipeline codex-gradle
+- Réutiliser Tika (déjà en dépendance) pour parser l'EPUB et extraire le XHTML
+- Produire un `.adoc` structuré à partir des balises `<h1>`-`<h6>`, `<pre>`, `<code>`
+- Intégrer dans `doc-pipeline` sans module séparé (Tika déjà présent)
+
+*Livrables* :
+- `ExtractEpubStructureTask.kt` (202 lignes) : tâche Gradle abstraite
+  - Input : `epubFile: RegularFileProperty`
+  - Output : `outputFile: RegularFileProperty`
+  - Utilise Tika `AutoDetectParser` + `ToXMLContentHandler` pour extraire le XHTML
+  - Parse DOM avec `javax.xml.parsers.DocumentBuilderFactory`
+  - Mappe `<h1>`-`<h6>` → `=`-`======` AsciiDoc
+  - `<pre>` → `[source,text]` + `----`
+  - `<code>` inline → `` `code` `` (avec reconstruction du texte environnant via `buildInlineContent`)
+  - `<p>`/`<div>` → texte corps avec support `<em>`, `<strong>`, `<a>`
+  - Header `[NOTE]` explicatif comme l'équivalent PDF
+- `ExtractEpubStructureTaskTest.kt` (6 tests) :
+  - h1/h2/h3 + code blocks + body text
+  - Hiérarchie profonde h4-h6
+  - EPUB vide → marqueur
+  - `<code>` inline → backticks avec texte environnant
+  - `<pre>` sans `<code>` → literal block
+  - Header [NOTE] présent
+  - Génération EPUB synthétique via `ZipOutputStream` (mimetype + META-INF + OEBPS)
+- `CodexPlugin.kt` : registration `extractEpubStructure` (10e tâche, groupe `codex`)
+- `CodexPluginTest.kt` : mis à jour 9→10 tâches, ajout type check `ExtractEpubStructureTask`
+
+*Pipeline complet (10 tâches)* :
+PDF/EPUB → extractBookStructure/extractEpubStructure (.adoc) → asciiDocToJsonLdd → importBookSql
+                                                   → convertToMarkdown → chunkDocument → exportKnowledgeBase
+                                                                       → codexIngest (pgvector)
+                                                                       → codexRetrieve (cosine similarity)
+
+*Decisions cles* :
+- Pas de module `codex-epub/` séparé — Tika est déjà dans les dépendances, intégration directe dans `doc-pipeline`
+- Approche DOM (pas regex) pour le parsing XHTML — robuste aux namespaces, imbrications, CDATA
+- `buildInlineContent()` pour préserver le contexte textuel autour des `<code>` inline
+- EPUB synthétique valide en test (mimetype en première entrée ZIP, META-INF/container.xml, OEBPS/opf + spine)
+- La tâche s'intègre dans le même pipeline aval que extractBookStructure (convertToMarkdown, chunkDocument, etc.)
+
+*Prochaine session* :
+- Voir PROMPT_REPRISE.adoc pour les options stratégiques (integration engine N3,
+  tests end-to-end pgvector, batching ONNX)

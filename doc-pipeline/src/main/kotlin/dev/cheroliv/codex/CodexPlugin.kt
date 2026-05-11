@@ -7,6 +7,7 @@ import dev.cheroliv.codex.tasks.CodexRetrieveTask
 import dev.cheroliv.codex.tasks.ConvertToMarkdownTask
 import dev.cheroliv.codex.tasks.ExportKnowledgeBaseTask
 import dev.cheroliv.codex.tasks.ExtractBookStructureTask
+import dev.cheroliv.codex.tasks.ExtractEpubStructureTask
 import dev.cheroliv.codex.tasks.ExtractTextTask
 import dev.cheroliv.codex.tasks.ImportBookSqlTask
 import org.gradle.api.Plugin
@@ -42,6 +43,14 @@ class CodexPlugin : Plugin<Project> {
         ) {
             it.group = GROUP
             it.description = "Extrait la structure d'un PDF (titres, sections) et produit un .adoc hiérarchique"
+        }
+
+        project.tasks.register(
+            "extractEpubStructure",
+            ExtractEpubStructureTask::class.java
+        ) {
+            it.group = GROUP
+            it.description = "Extrait la structure d'un EPUB (XHTML → .adoc avec hiérarchie et blocs de code)"
         }
 
         project.tasks.register(

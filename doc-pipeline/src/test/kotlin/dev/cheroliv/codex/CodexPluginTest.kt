@@ -7,6 +7,7 @@ import dev.cheroliv.codex.tasks.CodexRetrieveTask
 import dev.cheroliv.codex.tasks.ConvertToMarkdownTask
 import dev.cheroliv.codex.tasks.ExportKnowledgeBaseTask
 import dev.cheroliv.codex.tasks.ExtractBookStructureTask
+import dev.cheroliv.codex.tasks.ExtractEpubStructureTask
 import dev.cheroliv.codex.tasks.ExtractTextTask
 import dev.cheroliv.codex.tasks.ImportBookSqlTask
 import org.gradle.testfixtures.ProjectBuilder
@@ -17,7 +18,7 @@ import org.junit.jupiter.api.Test
 class CodexPluginTest {
 
     @Test
-    fun `plugin registers all 9 tasks`() {
+    fun `plugin registers all 10 tasks`() {
         val project = ProjectBuilder.builder().build()
         project.plugins.apply("com.cheroliv.codex.doc-pipeline")
 
@@ -27,6 +28,9 @@ class CodexPluginTest {
 
         val extractBookStructure = project.tasks.findByName("extractBookStructure")
         assertNotNull(extractBookStructure, "extractBookStructure task should be registered")
+
+        val extractEpubStructure = project.tasks.findByName("extractEpubStructure")
+        assertNotNull(extractEpubStructure, "extractEpubStructure task should be registered")
 
         val asciiDocToJsonLdd = project.tasks.findByName("asciiDocToJsonLdd")
         assertNotNull(asciiDocToJsonLdd, "asciiDocToJsonLdd task should be registered")
@@ -57,6 +61,7 @@ class CodexPluginTest {
 
         assert(project.tasks.getByName("extractText") is ExtractTextTask)
         assert(project.tasks.getByName("extractBookStructure") is ExtractBookStructureTask)
+        assert(project.tasks.getByName("extractEpubStructure") is ExtractEpubStructureTask)
         assert(project.tasks.getByName("asciiDocToJsonLdd") is AsciiDocToJsonLddTask)
         assert(project.tasks.getByName("importBookSql") is ImportBookSqlTask)
         assert(project.tasks.getByName("convertToMarkdown") is ConvertToMarkdownTask)
@@ -74,7 +79,7 @@ class CodexPluginTest {
         project.tasks.filter { it.group == "codex" }.forEach { task ->
             assertEquals("codex", task.group, "${task.name} should be in codex group")
         }
-        assertEquals(9, project.tasks.count { it.group == "codex" })
+        assertEquals(10, project.tasks.count { it.group == "codex" })
     }
 
     @Test

@@ -421,3 +421,40 @@ Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅
 - `publishToMavenLocal` obligatoire car le convention plugin buildSrc/ est dépendance du build
 - `:doc-pipeline:check` suffisant pour CI (compile + test + Kover coverage)
 - Pattern standard repris de graphify-gradle, engine, quizz-benchmark
+
+'''
+== Session 016 — CDX-10 : codex-epub (extraction EPUB via Tika → AsciiDoc)
+
+*Date* : 2026-05-11
+*Type* : implementation
+*Modele* : deepseek-v4-pro (via opencode)
+*Score* : 70/70 PASS
+
+*Objectif* :
+- Implémenter l'extraction EPUB dans le pipeline codex-gradle
+- Réutiliser Tika pour parser l'EPUB et mapper XHTML → AsciiDoc structuré
+- Intégrer dans doc-pipeline sans module séparé (Tika déjà présent)
+
+*Livrables* :
+- `ExtractEpubStructureTask.kt` (202 lignes) : Tika AutoDetectParser + DOM XHTML parsing,
+  mappage h1-h6 → =/==/===, pre → [source,text], code inline → `` `...` ``,
+  inline formatting (em, strong, a), buildInlineContent pour texte environnant
+- `ExtractEpubStructureTaskTest.kt` (6 tests) : EPUB synthétique ZipOutputStream,
+  hiérarchie multi-niveaux, code blocks, inline code, pre seul, EPUB vide, [NOTE] header
+- `CodexPlugin.kt` : registration extractEpubStructure (10e tâche)
+- `CodexPluginTest.kt` : 9→10 tâches, type check ExtractEpubStructureTask
+- `016-cdx10-codex-epub.adoc` (rapport session)
+
+*Pipeline complet (10 tâches)* :
+PDF/EPUB → extractBookStructure/extractEpubStructure (.adoc) → asciiDocToJsonLdd → importBookSql
+                                                   → convertToMarkdown → chunkDocument → exportKnowledgeBase
+                                                                       → codexIngest (pgvector)
+                                                                       → codexRetrieve (cosine similarity)
+
+Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅ | CDX-6 ✅ | CDX-7 ✅ | CDX-8 ✅ | CDX-9 ✅ | CDX-10 ✅
+
+*Decisions cles* :
+- Pas de module codex-epub/ séparé — intégration directe dans doc-pipeline
+- DOM parsing XHTML (pas regex) — robuste aux namespaces, imbrications, CDATA
+- buildInlineContent() préserve le contexte textuel autour des <code> inline
+- EPUB synthétique valide en test (mimetype première entrée ZIP, META-INF, OEBPS)

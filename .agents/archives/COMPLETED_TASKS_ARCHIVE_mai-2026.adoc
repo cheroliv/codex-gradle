@@ -136,3 +136,18 @@ JDK 24 Temurin, ubuntu-latest, timeout 15min. `publishToMavenLocal` prealable
 Trigger push/PR sur main/master.
 *Livrables* : `.github/workflows/test.yml`, `015-cdx-ci-github-workflow.adoc` (rapport).
 *Build* : ✅ `./gradlew :doc-pipeline:compileKotlin` BUILD SUCCESSFUL.
+
+'''
+== CDX-10 — codex-epub : extraction EPUB via Tika → AsciiDoc (2026-05-11)
+
+*Session* : 016
+*Type* : implementation
+*Detail* : Creation ExtractEpubStructureTask (202 lignes) — extraction EPUB via Tika
+AutoDetectParser + parsing DOM XHTML. Mappage h1-h6 → =/==/=== AsciiDoc,
+pre → [source,text], code inline → backticks. Support em/strong/a inline.
+buildInlineContent() préserve le contexte textuel autour des balises inline.
+Pas de module séparé — intégration directe dans doc-pipeline (Tika déjà présent).
+*Livrables* : `ExtractEpubStructureTask.kt`, `ExtractEpubStructureTaskTest.kt` (6 tests,
+EPUB synthétique ZipOutputStream), `CodexPlugin.kt` (10e tâche), `CodexPluginTest.kt`
+(mis à jour 9→10 tâches), `016-cdx10-codex-epub.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:test` BUILD SUCCESSFUL. 70/70 PASS.
