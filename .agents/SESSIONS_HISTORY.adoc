@@ -458,3 +458,30 @@ Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅
 - DOM parsing XHTML (pas regex) — robuste aux namespaces, imbrications, CDATA
 - buildInlineContent() préserve le contexte textuel autour des <code> inline
 - EPUB synthétique valide en test (mimetype première entrée ZIP, META-INF, OEBPS)
+
+'''
+== Session 017 — CDX-11 : codexEngine — piping codexRetrieve → engine N3
+
+*Date* : 2026-05-11
+*Type* : integration (N2→N3)
+*Modele* : deepseek-v4-pro:cloud (via opencode)
+*Score* : 75/75 PASS
+
+*Objectif* :
+- Fermer la boucle N2→N3 : connecter codexRetrieve au assembleCompositeContext de engine
+- Créer une API publique CodexVectorStore réutilisable par engine N3
+
+*Livrables* :
+- `CodexVectorStore.kt` — service JVM indépendant de Gradle, API search/searchBlocking
+- `CodexVectorStoreTest.kt` — 5 tests unitaires
+- `assembleCompositeContext` — tâche Gradle engine, pipeline N2→N3 complet
+- `engine.sh assemble [query]` — commande CLI engine
+- Pipeline : codexRetrieve → pgvector + codebaseRAG + Knowledge Graph → composite-context.json
+- Modes : composite|rag|kg|sql|none via -Pcontext
+
+*Decisions cles* :
+- CodexVectorStore dans dev.cheroliv.codex.store — package séparé des tasks
+- ProcessBuilder pattern (déjà utilisé pour codebase-gradle) — pas de includeBuild
+- Évité data class Kotlin dans la tâche Gradle engine (bug interop Groovy/Kotlin)
+- Dégradation propre : chaque source (codex, codebase, KG) est optionnelle
+- Boucle N2→N3 fermée : le corpus documentaire alimente le vecteur composite du RAG

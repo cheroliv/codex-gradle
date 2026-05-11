@@ -6,8 +6,8 @@ _Ontologie spatiale_ : voir `configuration/.agents/AGENT_GOVERNANCE.adoc`
 _DAG_ : N2 — Plugin Gradle d'acquisition de documents (Regle 4bis)
 
 _Derniere mise a jour_ : 2026-05-11
-_Session terminee_ : 016 ✅ (CDX-10 codex-epub TERMINÉ)
-_Session precedente_ : 015 ✅ (CDX-CI GitHub Actions TERMINÉ)
+_Session terminee_ : 017 ✅ (CDX-11 codexEngine TERMINÉ)
+_Session precedente_ : 016 ✅ (CDX-10 codex-epub TERMINÉ)
 
 '''
 == REGLES ABSOLUES (resume)
@@ -41,6 +41,7 @@ _Session precedente_ : 015 ✅ (CDX-CI GitHub Actions TERMINÉ)
 | 014 | 2026-05-11 | impl | CDX-9 codexRetrieve — recherche sémantique cosine similarity | ✅
 | 015 | 2026-05-11 | ci/cd | CDX-CI — GitHub Actions test.yml (JDK 24, publishToMavenLocal + check) | ✅
 | 016 | 2026-05-11 | impl | CDX-10 codex-epub — extraction EPUB via Tika → AsciiDoc (70/70 PASS) | ✅
+| 017 | 2026-05-11 | integration | CDX-11 codexEngine — piping codexRetrieve → engine N3 (75/75 PASS) | ✅
 |===
 
 '''
@@ -62,6 +63,7 @@ _Session precedente_ : 015 ✅ (CDX-CI GitHub Actions TERMINÉ)
 | CDX-9 | Task `codexRetrieve` — cosine similarity dans pgvector → corpus requêtable | ✅ TERMINE | P2
 | CDX-CI | GitHub Actions CI/CD — `.github/workflows/test.yml`, JDK 24, publishToMavenLocal + check | ✅ TERMINE | P2
 | CDX-10 | Task `extractEpubStructure` — extraction EPUB via Tika → AsciiDoc hiérarchique (h1-h6, code, inline) | ✅ TERMINE | P3
+| CDX-11 | Integration engine N3 : piping codexRetrieve → assembleCompositeContext (CodexVectorStore + tâche composite) | ✅ TERMINE | P2
 |===
 
 '''
@@ -80,8 +82,8 @@ _Session precedente_ : 015 ✅ (CDX-CI GitHub Actions TERMINÉ)
 | `settings.gradle.kts` | ✅ rootProject + include doc-pipeline
 | `buildSrc/` | ✅ Convention plugin + catalog buildSrc
 | `doc-pipeline/build.gradle.kts` | ✅ Dependances + publication
-| `doc-pipeline/src/main/` | ✅ CodexPlugin.kt + CodexExtension.kt + LicenseZoneDetector.kt + ExtractTextTask.kt + ExtractBookStructureTask.kt + AsciiDocToJsonLddTask.kt + ImportBookSqlTask.kt + ConvertToMarkdownTask.kt + ChunkDocumentTask.kt + ExportKnowledgeBaseTask.kt + CodexIngestTask.kt + CodexRetrieveTask.kt + DocNode.kt + FontStyle.kt
-| `doc-pipeline/src/test/` | ✅ CodexPluginTest.kt (4) + LicenseZoneDetectorTest.kt (7) + ExtractTextTaskTest.kt (3) + ExtractBookStructureTaskTest.kt (10) + AsciiDocToJsonLddTaskTest.kt (4) + ImportBookSqlTaskTest.kt (4) + ConvertToMarkdownTaskTest.kt (10) + ChunkDocumentTaskTest.kt (11) + ExportKnowledgeBaseTaskTest.kt (9) + CodexRetrieveTaskTest.kt (2) — 64/64 PASS
+| `doc-pipeline/src/main/` | ✅ CodexPlugin.kt + CodexExtension.kt + LicenseZoneDetector.kt + ExtractTextTask.kt + ExtractBookStructureTask.kt + ExtractEpubStructureTask.kt + AsciiDocToJsonLddTask.kt + ImportBookSqlTask.kt + ConvertToMarkdownTask.kt + ChunkDocumentTask.kt + ExportKnowledgeBaseTask.kt + CodexIngestTask.kt + CodexRetrieveTask.kt + DocNode.kt + FontStyle.kt + store/CodexVectorStore.kt
+| `doc-pipeline/src/test/` | ✅ CodexPluginTest.kt (4) + LicenseZoneDetectorTest.kt (7) + ExtractTextTaskTest.kt (3) + ExtractBookStructureTaskTest.kt (10) + ExtractEpubStructureTaskTest.kt (6) + AsciiDocToJsonLddTaskTest.kt (4) + ImportBookSqlTaskTest.kt (4) + ConvertToMarkdownTaskTest.kt (10) + ChunkDocumentTaskTest.kt (11) + ExportKnowledgeBaseTaskTest.kt (9) + CodexRetrieveTaskTest.kt (2) + store/CodexVectorStoreTest.kt (5) — 75/75 PASS
 |===
 
 '''

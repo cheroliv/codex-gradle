@@ -1,0 +1,79 @@
+= Session 017 — CDX-11 « codexEngine — piping codexRetrieve → engine N3 »
+:toc:
+
+*Date* : 2026-05-11
+*Type* : integration (N2→N3)
+*Modele* : deepseek-v4-pro:cloud (via opencode)
+*Score* : 75/75 PASS
+
+'''
+== Objectif
+
+Fermer la boucle N2→N3 : connecter `codexRetrieve` (cosine similarity pgvector) au
+`assembleCompositeContext` de engine pour que le corpus documentaire (PDF, EPUB, AsciiDoc)
+alimente le vecteur composite du RAG.
+
+'''
+== Livrables
+
+=== 1. CodexVectorStore.kt — Contrat d'interface publique
+- `doc-pipeline/src/main/kotlin/dev/cheroliv/codex/store/CodexVectorStore.kt`
+- Service JVM indépendant de Gradle, réutilisable par engine N3
+- API : `searchBlocking(query, topK)` et `search(query, topK)` suspend
+- Même logique de recherche cosine similarity que `CodexRetrieveTask`
+- ONNX AllMiniLmL6V2 intégré, R2DBC pgvector, zéro dépendance Gradle
+
+=== 2. CodexVectorStoreTest.kt — Tests unitaires (5 tests)
+- `doc-pipeline/src/test/kotlin/dev/cheroliv/codex/store/CodexVectorStoreTest.kt`
+- Instantiation avec paramètres custom, défauts, contrat RetrieveResult intact,
+  présence méthodes searchBlocking/search
+
+=== 3. assembleCompositeContext — Tâche Gradle composite engine
+- `engine/build.gradle.kts` : nouvelle tâche `assembleCompositeContext`
+- Pipeline N2→N3 complet :
+  - `codexRetrieve` via ProcessBuilder (dégradation propre sans pgvector)
+  - Knowledge Graph (`office/graph.json`) — 21174 nodes chargés
+  - `augmentOpencode` codebase-gradle via ProcessBuilder
+  - Mode contextuel : `-Pcontext=composite|rag|kg|sql|none`
+  - Sortie JSON structurée → `build/engine/composite-context.json`
+
+=== 4. engine.sh commande `assemble`
+- `engine/engine.sh` : `./engine assemble [query]`
+- Route vers `./gradlew assembleCompositeContext -Pquery=...`
+
+'''
+== Tests
+
+- codex-gradle : 75/75 PASS (12 classes, +1 CodexVectorStoreTest)
+- engine : `./gradlew tasks --group engine` → SUCCESS (assembleCompositeContext visible)
+- End-to-end : `./engine.sh assemble "What is the augmented context pipeline?"` → SUCCESS
+  - codexRetrieve degradation OK (exit=1, pgvector indisponible)
+  - Knowledge Graph : 21174 nodes, 22286 edges
+  - JSON composite produit proprement
+
+'''
+== Fichiers modifiés / créés
+
+|===
+| Fichier | Action
+| `codex-gradle/doc-pipeline/src/main/kotlin/dev/cheroliv/codex/store/CodexVectorStore.kt` | Créé
+| `codex-gradle/doc-pipeline/src/test/kotlin/dev/cheroliv/codex/store/CodexVectorStoreTest.kt` | Créé
+| `engine/build.gradle.kts` | Modifié (+assembleCompositeContext)
+| `engine/engine.sh` | Modifié (+assemble command)
+|===
+
+'''
+== Décisions clés
+
+- CodexVectorStore dans `dev.cheroliv.codex.store` — package séparé des tasks pour contrat clair
+- `assembleCompositeContext` sans `data class` Kotlin dans la tâche Gradle — évité bug interop Groovy/Kotlin
+  (`ERROR_EXPR Default Stub`)
+- ProcessBuilder pattern existant (déjà utilisé pour codebase-gradle) — pas de `includeBuild`
+- Dégradation propre : chaque source (codex, codebase, KG) est optionnelle
+- Boucle N2→N3 fermée : le corpus documentaire alimente le vecteur composite du RAG
+
+'''
+== Chaîne EPIC complète
+
+CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅ |
+CDX-6 ✅ | CDX-7 ✅ | CDX-8 ✅ | CDX-9 ✅ | CDX-10 ✅ | CDX-11 ✅

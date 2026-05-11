@@ -2,24 +2,25 @@
 :toc:
 
 _Date_ : 2026-05-11
-_Session terminee_ : 016 ✅ (CDX-10 codex-epub TERMINÉ)
-_Build_ : 70/70 PASS, compile clean 0 warning
+_Session terminee_ : 017 ✅ (CDX-11 codexEngine TERMINÉ)
+_Build_ : 75/75 PASS, compile clean 0 warning
 _CI/CD_ : `.github/workflows/test.yml`
 
 '''
-== Mission de la Session 017
+== Mission de la Session 018
 
 *[STRATEGIE]* La prochaine session pourra etre consacree a :
-- Integration engine N3 : piping codexRetrieve → assembleCompositeContext
-- Ajout de tests d'integration end-to-end codexIngest + codexRetrieve avec
-  pgvector reel (necessite PostgreSQL + pgvector local)
+- Tests d'integration end-to-end codexIngest + codexRetrieve avec
+  pgvector reel (necessite PostgreSQL + pgvector local pour CI)
 - Optimisation : batching ONNX pour ingestion multi-documents
-- Ajout tache `codexEpub` composite ou auto-detection format
+- Ajout tache composite `codexPipeline` auto-detection format (PDF/EPUB)
+- Exposition REST via engine (l'API Edster SaaS qui consomme assembleCompositeContext)
 
 '''
-== Etat du Pipeline (Session 016)
+== Etat du Pipeline (Session 017 — CDX-11 termine)
 
-10 taches enregistrees dans le groupe `codex` :
+10 taches enregistrees dans le groupe `codex` +
+1 contrat d'interface publique `CodexVectorStore` consomme par engine N3 :
 
 . extractText
 . extractBookStructure
@@ -32,15 +33,26 @@ _CI/CD_ : `.github/workflows/test.yml`
 . codexIngest (ONNX → pgvector)
 . codexRetrieve (cosine similarity → corpus requetable)
 
-11 classes de test, 70/70 PASS, 0 failure, 0 skipped.
++ `CodexVectorStore` dans `dev.cheroliv.codex.store` — API publique pour engine N3 :
+  `search(query, topK)` suspend / `searchBlocking(query, topK)` bloquant
+
+12 classes de test, 75/75 PASS, 0 failure, 0 skipped.
 
 CI/CD : `.github/workflows/test.yml` — `publishToMavenLocal` + `:doc-pipeline:check` sur JDK 24.
 
 '''
-== Conventions pgvector
+== Integration Engine N3 (CDX-11)
 
-Le bloc `codex { }` dans le build.gradle.kts du projet consommateur
-expose les proprietes suivantes :
+Engine (N3) dispose maintenant de :
+- `./engine assemble [query]` — `assembleCompositeContext`
+  - `codexRetrieve` via ProcessBuilder (fallback propre sans pgvector)
+  - Knowledge Graph (`office/graph.json`)
+  - `augmentOpencode` codebase-gradle
+  - Sortie `build/engine/composite-context.json`
+  - Mode : `-Pcontext=composite|rag|kg|sql|none`
+
+'''
+== Conventions pgvector
 
 [source,kotlin]
 ----
@@ -53,9 +65,6 @@ codex {
     pgvectorPassword = "codex"
 }
 ----
-
-Les taches codexIngest et codexRetrieve heritent automatiquement
-de ces conventions.
 
 '''
 == Commandes rapides
@@ -73,4 +82,7 @@ de ces conventions.
 
 # Liste des taches
 ./gradlew :doc-pipeline:tasks --group codex
+
+# Engine end-to-end
+cd ../engine && ./engine.sh assemble "ma question"
 ----
