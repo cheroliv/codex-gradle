@@ -113,8 +113,9 @@ publishing {
 }
 
 signing {
-    val isReleaseVersion = !version.toString().endsWith("-SNAPSHOT")
-    if (isReleaseVersion) sign(publishing.publications)
+    if (System.getenv("CI") != "true" && !version.toString().endsWith("-SNAPSHOT")) {
+        sign(publishing.publications)
+    }
     useGpgCmd()
 }
 
