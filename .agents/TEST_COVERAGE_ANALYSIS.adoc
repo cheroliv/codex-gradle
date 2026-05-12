@@ -1,44 +1,48 @@
 = TEST_COVERAGE_ANALYSIS — codex-gradle
-:date: 2026-05-11
-:session: 014
+:date: 2026-05-12
+:session: 018
 
-== Couverture par Classe (64 tests, 10 classes)
+== Couverture par Classe (79 tests, 13 classes)
 
 |===
 | Classe | Tests | Statut
-| `CodexPluginTest` | 4 | ✅ 9 taches + types + groupe codex + extension zone
+| `CodexPluginTest` | 4 | ✅ 11 taches + types + groupe codex + extension zone
 | `LicenseZoneDetectorTest` | 7 | ✅ OSS/CSS/UNKNOWN detection + Apache-2.0/PROPRIETARY mapping
 | `ExtractTextTaskTest` | 3 | ✅ Simple PDF, multi-ligne, empty PDF
-| `ExtractBookStructureTaskTest` | 10 | ✅ Bold/Italic/Monospace/Normal/BoldItalic detection,
-  Headers+code block, Empty PDF, Monospace code, Hierarchy, Inline code
+| `ExtractBookStructureTaskTest` | 10 | ✅ Bold/Italic/Monospace/Normal/BoldItalic detection, Headers+code block, Empty PDF
+| `ExtractEpubStructureTaskTest` | 6 | ✅ EPUB synthetique, hierarchie multi-niveaux, code blocks, inline code, empty EPUB
 | `AsciiDocToJsonLddTaskTest` | 4 | ✅ Simple hierarchy, Paragraphs, Empty doc, Nested children
 | `ImportBookSqlTaskTest` | 4 | ✅ DDL+INSERT, Correct titles, Paragraph INSERT, Empty array
-| `ConvertToMarkdownTaskTest` | 10 | ✅ Headers, Code blocks, Admonitions, Tables, Images,
-  Links, Lists, Inline formatting, Comments, Empty doc
-| `ChunkDocumentTaskTest` | 11 | ✅ Multi-headings, Single heading, No headings, Code blocks,
-  Deterministic IDs, Section hierarchy, Overlap, Last-section null, Blank sections,
-  Licence propagation, Empty entities
-| `ExportKnowledgeBaseTaskTest` | 9 | ✅ 3 formats, JSON-L context/graph, Code blocks in JSON-L,
-  Markdown hierarchy, Overlap hints, AsciiDoc structure, Code blocks in AsciiDoc,
-  Sorting, headingLevel=0
-| `CodexRetrieveTaskTest` | 2 | ✅ Registration, Configurabilite (query, topK, pgHost, pgPort, pgDatabase, pgUser, pgPassword)
-| TODO | `CodexIngestTaskTest` | A CREER (session suivante — TestContainers pgvector)
+| `ConvertToMarkdownTaskTest` | 10 | ✅ Headers, Code blocks, Admonitions, Tables, Images, Links, Lists, Inline formatting
+| `ChunkDocumentTaskTest` | 11 | ✅ Multi-headings, Code blocks, Deterministic IDs, Section hierarchy, Overlap, Licence
+| `ExportKnowledgeBaseTaskTest` | 9 | ✅ 3 formats, JSON-L context/graph, Code blocks, Markdown hierarchy, AsciiDoc, Sorting
+| `CodexRetrieveTaskTest` | 2 | ✅ Registration, Configurabilite
+| `CodexVectorStoreTest` | 5 | ✅ Instanciation, Default params, RetrieveResult contract, searchBlocking, search
+| `CodexIngestRetrieveIT` | 4 | ✅ End-to-end pgvector, Batching batchSize=1, Pipeline auto-detect PDF, Empty chunks
 |===
 
-== Couverture des Taches (9 taches enregistrees)
+== Couverture des Taches (11 taches enregistrees)
 
 |===
 | Tache | Classe | Testee
 | `extractText` | ExtractTextTask | ✅ 3 tests
 | `extractBookStructure` | ExtractBookStructureTask | ✅ 10 tests
+| `extractEpubStructure` | ExtractEpubStructureTask | ✅ 6 tests
 | `asciiDocToJsonLdd` | AsciiDocToJsonLddTask | ✅ 4 tests
 | `importBookSql` | ImportBookSqlTask | ✅ 4 tests
 | `convertToMarkdown` | ConvertToMarkdownTask | ✅ 10 tests
 | `chunkDocument` | ChunkDocumentTask | ✅ 11 tests
 | `exportKnowledgeBase` | ExportKnowledgeBaseTask | ✅ 9 tests
-| `codexIngest` | CodexIngestTask | ❌ Pas de test (R2DBC necessite pgvector en ligne — TestContainers a venir)
-| `codexRetrieve` | CodexRetrieveTask | ✅ 2 tests
+| `codexIngest` | CodexIngestTask | ✅ 4 tests (integration pgvector)
+| `codexRetrieve` | CodexRetrieveTask | ✅ 2 + 4 tests (integration pgvector)
+| `codexPipeline` | CodexPipelineTask | ✅ 1 test (auto-detect PDF format)
 |===
 
+== Infrastructure de test
+
+- TestContainers 1.21.4 + docker-java 3.7.0 (aligne slider-gradle/plantuml-gradle)
+- pgvector/pgvector:pg16 pour tests end-to-end
+- slf4j 2.0.17 + logback 1.5.32 pour logs propres
+
 [.text-right]
-*Analyse mise a jour le 11 mai 2026 — Session 014 CDX-9.*
+*Analyse mise a jour le 12 mai 2026 — Session 018 CDX-12.*

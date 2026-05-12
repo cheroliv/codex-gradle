@@ -151,3 +151,31 @@ Pas de module séparé — intégration directe dans doc-pipeline (Tika déjà p
 EPUB synthétique ZipOutputStream), `CodexPlugin.kt` (10e tâche), `CodexPluginTest.kt`
 (mis à jour 9→10 tâches), `016-cdx10-codex-epub.adoc` (rapport).
 *Build* : ✅ `./gradlew :doc-pipeline:test` BUILD SUCCESSFUL. 70/70 PASS.
+
+'''
+== CDX-11 — codexEngine : piping codexRetrieve → engine N3 (2026-05-11)
+
+*Session* : 017
+*Type* : integration (N2→N3)
+*Detail* : Creation CodexVectorStore (109 lignes) — service JVM independant de Gradle
+avec API search/searchBlocking. Integration assembleCompositeContext dans engine N3.
+Pipeline : codexRetrieve → pgvector + codebaseRAG + Knowledge Graph → composite-context.json.
+Modes : composite|rag|kg|sql|none via -Pcontext. ProcessBuilder pour appel inter-plugin.
+*Livrables* : `CodexVectorStore.kt`, `CodexVectorStoreTest.kt` (5 tests), `assembleCompositeContext`
+(tache engine), `engine.sh assemble [query]`, `017-cdx11-codex-engine.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:test` BUILD SUCCESSFUL. 75/75 PASS.
+
+'''
+== CDX-12 — Tests integration pgvector end-to-end + batching ONNX + codexPipeline (2026-05-12)
+
+*Session* : 018
+*Type* : test (integration)
+*Detail* : Tests end-to-end codexIngest + codexRetrieve avec PostgreSQLContainer pgvector/pgvector:pg16.
+Batching ONNX parametrable (batchSize=32). Tache composite codexPipeline auto-detection
+PDF/EPUB -> extraction -> Markdown -> chunking -> PipelineResult. Fix bug R2DBC bind()
+avec ::vector cast (embedding inline). Connexion unique coroutine. Alignement docker-java
+3.7.0 + testcontainers 1.21.4 sur slider-gradle/plantuml-gradle.
+*Livrables* : `CodexIngestRetrieveIT.kt` (4 tests), `CodexPipelineTask.kt`, `CodexIngestTask.kt`
+(refacto batching), `CodexPlugin.kt` (11e tache), `gradle/libs.versions.toml` (testcontainers),
+`doc-pipeline/build.gradle.kts` (deps), `018-cdx12-tests-integration-pgvector.adoc` (rapport).
+*Build* : ✅ `./gradlew :doc-pipeline:test` BUILD SUCCESSFUL. 79/79 PASS. API engine N3 inchangee.

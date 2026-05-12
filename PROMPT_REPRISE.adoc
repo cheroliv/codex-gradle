@@ -1,25 +1,20 @@
 = PROMPT_REPRISE — codex-gradle
 :toc:
 
-_Date_ : 2026-05-11
-_Session terminee_ : 017 ✅ (CDX-11 codexEngine TERMINÉ)
-_Build_ : 75/75 PASS, compile clean 0 warning
+_Date_ : 2026-05-12
+_Session terminee_ : 018 ✅ (CDX-12 Tests integration pgvector end-to-end TERMINÉ)
+_Build_ : 79/79 PASS (75 unit + 4 integration), compile clean 0 warning
 _CI/CD_ : `.github/workflows/test.yml`
 
 '''
-== Mission de la Session 018
+== Mission de la Session 019
 
-*[STRATEGIE]* La prochaine session pourra etre consacree a :
-- Tests d'integration end-to-end codexIngest + codexRetrieve avec
-  pgvector reel (necessite PostgreSQL + pgvector local pour CI)
-- Optimisation : batching ONNX pour ingestion multi-documents
-- Ajout tache composite `codexPipeline` auto-detection format (PDF/EPUB)
-- Exposition REST via engine (l'API Edster SaaS qui consomme assembleCompositeContext)
+*[STRATEGIE]* Exposition REST via engine N3 — API Edster SaaS qui consomme assembleCompositeContext.
 
 '''
-== Etat du Pipeline (Session 017 — CDX-11 termine)
+== Etat du Pipeline (Session 018 — CDX-12 termine)
 
-10 taches enregistrees dans le groupe `codex` +
+11 taches enregistrees dans le groupe `codex` +
 1 contrat d'interface publique `CodexVectorStore` consomme par engine N3 :
 
 . extractText
@@ -30,26 +25,35 @@ _CI/CD_ : `.github/workflows/test.yml`
 . convertToMarkdown
 . chunkDocument
 . exportKnowledgeBase
-. codexIngest (ONNX → pgvector)
+. codexIngest (ONNX → pgvector, batching paramétrable `batchSize=32`)
 . codexRetrieve (cosine similarity → corpus requetable)
+. codexPipeline (auto-détection PDF/EPUB → extraction → Markdown → chunking → JSON PipelineResult)
 
 + `CodexVectorStore` dans `dev.cheroliv.codex.store` — API publique pour engine N3 :
   `search(query, topK)` suspend / `searchBlocking(query, topK)` bloquant
 
-12 classes de test, 75/75 PASS, 0 failure, 0 skipped.
+13 classes de test (12 unit + 1 integration), 79/79 PASS, 0 failure, 0 skipped.
 
-CI/CD : `.github/workflows/test.yml` — `publishToMavenLocal` + `:doc-pipeline:check` sur JDK 24.
+CI/CD : `.github/workflows/test.yml` — Docker natif sur `ubuntu-latest`, TestContainers pgvector intégré.
 
 '''
-== Integration Engine N3 (CDX-11)
+== Nouveautes CDX-12
 
-Engine (N3) dispose maintenant de :
-- `./engine assemble [query]` — `assembleCompositeContext`
-  - `codexRetrieve` via ProcessBuilder (fallback propre sans pgvector)
-  - Knowledge Graph (`office/graph.json`)
-  - `augmentOpencode` codebase-gradle
-  - Sortie `build/engine/composite-context.json`
-  - Mode : `-Pcontext=composite|rag|kg|sql|none`
+=== ONNX Batching
+- `CodexIngestTask.batchSize` paramétrable (convention: 32)
+- Les chunks sont groupés par lots avant vectorisation → réduction des appels ONNX
+
+=== Tache composite codexPipeline
+- Auto-détection PDF/EPUB via extension de fichier
+- Compose extractBookStructure/ExtractEpubStructure + convertToMarkdown + chunkDocument
+- Sortie JSON `PipelineResult` (format, license, docCount, chunkCount)
+
+=== Tests integration pgvector
+- `CodexIngestRetrieveIT.kt` — 4 tests avec PostgreSQLContainer pgvector/pgvector:pg16
+- Test end-to-end : ingest 3 chunks → retrieve cosine similarity (seuil > 0.6)
+- Test batching batchSize=1 → 5 chunks tous retrievable
+- Test codexPipeline auto-détection format PDF
+- docker-java 3.7.0 + testcontainers 1.21.4 (aligné slider-gradle/plantuml-gradle)
 
 '''
 == Conventions pgvector
@@ -74,14 +78,20 @@ codex {
 # Compilation
 ./gradlew :doc-pipeline:compileKotlin
 
-# Tests
+# Tests unitaires
+./gradlew :doc-pipeline:test --tests "*Test"
+
+# Tests integration (necessite Docker)
+./gradlew :doc-pipeline:test --tests "*IT"
+
+# Tous les tests
 ./gradlew :doc-pipeline:test
 
 # Check complet (compile + tests + Kover)
 ./gradlew :doc-pipeline:check
 
-# Liste des taches
-./gradlew :doc-pipeline:tasks --group codex
+# Pipeline composite
+./gradlew codexPipeline --sourceFile=/path/to/doc.pdf
 
 # Engine end-to-end
 cd ../engine && ./engine.sh assemble "ma question"

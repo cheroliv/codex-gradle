@@ -3,6 +3,7 @@ package dev.cheroliv.codex
 import dev.cheroliv.codex.tasks.AsciiDocToJsonLddTask
 import dev.cheroliv.codex.tasks.ChunkDocumentTask
 import dev.cheroliv.codex.tasks.CodexIngestTask
+import dev.cheroliv.codex.tasks.CodexPipelineTask
 import dev.cheroliv.codex.tasks.CodexRetrieveTask
 import dev.cheroliv.codex.tasks.ConvertToMarkdownTask
 import dev.cheroliv.codex.tasks.ExportKnowledgeBaseTask
@@ -105,6 +106,7 @@ class CodexPlugin : Plugin<Project> {
             it.pgDatabase.convention(extension.pgvectorDatabase)
             it.pgUser.convention(extension.pgvectorUser)
             it.pgPassword.convention(extension.pgvectorPassword)
+            it.batchSize.convention("32")
         }
 
         project.tasks.register(
@@ -119,6 +121,21 @@ class CodexPlugin : Plugin<Project> {
             it.pgDatabase.convention(extension.pgvectorDatabase)
             it.pgUser.convention(extension.pgvectorUser)
             it.pgPassword.convention(extension.pgvectorPassword)
+        }
+
+        project.tasks.register(
+            "codexPipeline",
+            CodexPipelineTask::class.java
+        ) {
+            it.group = GROUP
+            it.description = "Pipeline composite auto-detection PDF/EPUB : extraction → Markdown → chunking → resultat JSON"
+            it.licenseName.convention(license)
+            it.pgHost.convention(extension.pgvectorHost)
+            it.pgPort.convention(extension.pgvectorPort)
+            it.pgDatabase.convention(extension.pgvectorDatabase)
+            it.pgUser.convention(extension.pgvectorUser)
+            it.pgPassword.convention(extension.pgvectorPassword)
+            it.batchSize.convention("32")
         }
     }
 

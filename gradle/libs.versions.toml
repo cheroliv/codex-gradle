@@ -29,6 +29,8 @@ kover = "0.9.1"
 # ── Tests ─────────────────────────────────────────────────────────────────────
 junit-jupiter = "5.12.2"
 junit-platform = "1.12.2"
+testcontainers = "1.21.4"
+docker-java = "3.7.0"
 
 [libraries]
 # ── Kotlin ────────────────────────────────────────────────────────────────────
@@ -58,6 +60,14 @@ kotlinx-coroutines-reactive = { module = "org.jetbrains.kotlinx:kotlinx-coroutin
 # ── Tests ─────────────────────────────────────────────────────────────────────
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+testcontainers-bom = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers" }
+testcontainers-core = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
+docker-java-core = { module = "com.github.docker-java:docker-java-core", version.ref = "docker-java" }
+docker-java-transport-httpclient5 = { module = "com.github.docker-java:docker-java-transport-httpclient5", version.ref = "docker-java" }
+testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+testcontainers-junit5 = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version = "2.0.17" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version = "1.5.32" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

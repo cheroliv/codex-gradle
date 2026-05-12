@@ -1,0 +1,61 @@
+= Session 018 — CDX-12 : Tests integration pgvector end-to-end + batching ONNX + codexPipeline
+:date: 2026-05-12
+:score: 79/79 PASS
+
+== Objectif
+
+Tests d'integration end-to-end codexIngest + codexRetrieve avec pgvector reel (TestContainers),
+batching ONNX parametrable, tache composite `codexPipeline` auto-detection PDF/EPUB.
+Pas de changement d'API -> engine N3 inchange.
+
+== Livrables
+
+=== ONNX Batching (CodexIngestTask)
+- Champ `batchSize` parametrable (convention: 32, @Optional)
+- Connexion R2DBC unique maintenue via coroutine (evite les close prematures)
+- Embedding inline dans le SQL (`'[vector]'::vector`) au lieu de bind() + cast
+
+=== Tache composite codexPipeline (CodexPipelineTask.kt)
+- Auto-detection format PDF/EPUB/UNKNOWN via extension de fichier
+- Pipeline : extraction -> conversion Markdown -> chunking semantique
+- Sortie JSON `PipelineResult` (sourceDocument, format, license, totalDocuments, totalChunks)
+- Compose PDFBox/Tika/Flexmark directement (pas de delegation a des taches Gradle)
+
+=== Tests integration pgvector (CodexIngestRetrieveIT.kt)
+- 4 tests @Tag("integration") avec PostgreSQLContainer pgvector/pgvector:pg16
+- test end-to-end : 3 chunks ingest -> retrieve cosine similarity (seuil > 0.6)
+- test batching batchSize=1 : 5 chunks tous retrievable
+- test codexPipeline auto-detection format PDF
+- test chunks vides
+
+=== Infra CI
+- TestContainers 1.21.4, docker-java 3.7.0 (aligne slider-gradle/plantuml-gradle)
+- slf4j-api + logback-classic pour logs propres
+- Docker natif sur ubuntu-latest -> pas de modif workflow CI
+
+== Bugs corriges
+
+1. `r2dbc-postgresql` bind() avec `::vector` cast echoue -> inline `'[...]'::vector`
+2. Connexions ephemeres `finally { close() }` coupaient avant `collectList().awaitFirst()` -> connexion unique
+3. Seuil similarite 0.8 trop haut pour ONNX -> 0.6
+
+== Fichiers modifies (10)
+
+|===
+| Fichier | Changement
+| `CodexIngestTask.kt` | Batching, connexion unique, fix vector inline
+| `CodexPipelineTask.kt` | NOUVEAU — composite auto-detection
+| `CodexPlugin.kt` | Registration codexPipeline + batchSize convention
+| `CodexPluginTest.kt` | 10->11 taches
+| `CodexIngestRetrieveIT.kt` | NOUVEAU — 4 tests pgvector reel
+| `gradle/libs.versions.toml` | testcontainers, docker-java, slf4j/logback
+| `doc-pipeline/build.gradle.kts` | Deps testcontainers + docker-java
+| `.agents/INDEX.adoc` | Roadmap CDX-12
+| `SESSIONS_HISTORY.adoc` | Entree session 018
+| `AGENTS.adoc` (racine) | Brooklyn session 018
+|===
+
+== Resultat
+
+79 tests, 0 failure, 0 skipped. 13 classes de test.
+API engine N3 inchangee.
