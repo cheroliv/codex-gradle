@@ -718,7 +718,7 @@ user, evaluation, ressource_pedagogique, remediation, satisfaction),
 → `./gradlew <tâche>` — pattern documenté dans `DOGFOODING_ARCHITECTURE.adoc` |
 Tous les plugins
 | **Image Docker double usage** | ✅ Production | Runner CI/CD + outil terrain
-FTTH, publiée sur DockerHub | magic_stick (64+ sessions)
+FTTH, publiée sur DockerHub | magic-stick (64+ sessions)
 | **Audit repos** | ✅ Terminé | 41 dépôts candidats contexte augmenté, 12 bruit,
 classés dans `AUDIT_BUSINESS_LOGIC_REPOSITORIES.adoc` | engine/
 |===
