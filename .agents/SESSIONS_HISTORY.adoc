@@ -526,3 +526,8 @@ Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅
 - TestContainers aligne sur slider-gradle/plantuml-gradle (docker-java 3.7.0, testcontainers 1.21.4)
 - Pas de modification CI : Docker natif sur ubuntu-latest
 - API existante inchangee : engine N3 continue de fonctionner sans modification
+
+== Session 020 — Code Review Globale
+*Date*: 2026-05-12
+*Type*: review
+*Résumé*: Audit passif. CDX-0→12 TERMINÉS, 79/79 PASS.

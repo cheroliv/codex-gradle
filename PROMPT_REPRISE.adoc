@@ -2,12 +2,12 @@
 :toc:
 
 _Date_ : 2026-05-12
-_Session terminee_ : 018 ✅ (CDX-12 Tests integration pgvector end-to-end TERMINÉ)
+_Session terminee_ : 020 ✅ — Code Review Globale (audit passif)
 _Build_ : 79/79 PASS (75 unit + 4 integration), compile clean 0 warning
 _CI/CD_ : `.github/workflows/test.yml`
 
 '''
-== Mission de la Session 019
+== Mission de la Session 021
 
 *[STRATEGIE]* Exposition REST via engine N3 — API Edster SaaS qui consomme assembleCompositeContext.
 

@@ -6,10 +6,10 @@ _Ontologie spatiale_ : voir `configuration/.agents/AGENT_GOVERNANCE.adoc`
 _DAG_ : N2 — Plugin Gradle d'acquisition de documents (Regle 4bis)
 
 _Derniere mise a jour_ : 2026-05-12
-_Session terminee_ : 018 ✅ (CDX-12 Tests integration pgvector end-to-end TERMINÉ)
-_Session precedente_ : 017 ✅ (CDX-11 codexEngine TERMINÉ)
-_Session en cours_ : 019 — (a definir)
-_Prochaine session_ : 019 — CDX-13 exposition REST via engine N3
+_Session terminee_ : 020 ✅ — Code Review Globale (audit passif)
+_Session precedente_ : 018 ✅ (CDX-12 Tests integration pgvector end-to-end TERMINÉ)
+_Session en cours_ : 021 — (a definir)
+_Prochaine session_ : 021 — CDX-13 exposition REST via engine N3
 
 '''
 == REGLES ABSOLUES (resume)

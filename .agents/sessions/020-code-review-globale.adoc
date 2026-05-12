@@ -1,0 +1,22 @@
+= Session 020 — Code Review Globale (audit passif)
+:date: 2026-05-12
+:type: review
+:score: audit
+
+== Contexte
+
+Code review globale des 8 boroughs. Codex-gradle audité en lecture seule :
+`doc-pipeline/build.gradle.kts`, `CodexPlugin.kt`, tous les `*Task.kt`, `*TaskTest.kt`.
+Aucune modification de code. Codex est le borough le plus mature : CDX-0→12 TERMINÉS,
+11 tâches Gradle, 79/79 tests PASS, 13 classes de test, Kover activé, CI présente.
+
+== Problèmes identifiés (documentés dans GLOBAL_CODE_REVIEW.adoc)
+- Parsers JSON manuels (ImportBookSqlTask 140 lignes, char-by-char)
+- ConvertToMarkdownTask.buildMarkdown() 160 lignes, 15 continue
+- Zéro KDoc sur ~2000 lignes
+- Messages d'erreur en français
+
+== Points forts
+- Score santé : 3.5/5 (top 1 avec codebase et quizz-benchmark)
+- Pipeline complet : PDF/EPUB → extract → Adoc → Markdown → chunk → pgvector → retrieve
+- buildSrc convention plugin correct
