@@ -7,8 +7,8 @@ object LicenseZoneDetector {
     fun detect(projectDir: String): LicenseZone {
         val normalized = projectDir.replace("\\", "/")
         return when {
-            normalized.contains("/foundry/OSS/") -> LicenseZone.OSS
-            normalized.contains("/foundry/CSS/") -> LicenseZone.CSS
+            normalized.contains("/foundry/public/") -> LicenseZone.OSS
+            normalized.contains("/foundry/private/") -> LicenseZone.CSS
             else -> LicenseZone.UNKNOWN
         }
     }
