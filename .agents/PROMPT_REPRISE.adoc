@@ -1,48 +1,24 @@
 = PROMPT_REPRISE — codex-gradle
-:date: 2026-05-10
-:session: 013 CDX-8 TERMINEE
-:prochaine_session: 014 — CDX-9 codex-epub
+:date: 2026-05-12
+:session: 019 EPIC D TERMINE
+:prochaine_session: 020 — continuation pipeline ou gouvernance
 :modele: deepseek-v4-pro:cloud
 
-== Contexte de la session precedente (013)
+== Contexte session 019 — EPIC D
 
-CDX-8 `codexIngest` TERMINE. La tache vectorise les chunks JSON avec ONNX
-AllMiniLmL6V2 (384d) et les insere dans pgvector via R2DBC reactive.
+- Java 25→24 (jvmTarget, jvmToolchain, source/targetCompatibility)
+- DocNode : ajout @Serializable LddNode + conversions toDocNode/toLddNode
+- ImportBookSqlTask : Json.decodeFromString<List<LddNode>>
+- AsciiDocToJsonLddTask : Json.encodeToString(ListSerializer(LddNode.serializer()))
 
-- `CodexIngestTask.kt` (188 lignes) — schema `codex_documents`/`codex_chunks` avec `vector(384)`
-- `CodexExtension.kt` etendu avec 5 proprietes pgvector
-- 62/62 tests PASS
+== Build
 
-== Pipeline complet (8 taches codex)
+- doc-pipeline:compileKotlin ✅
+- doc-pipeline:compileTestKotlin ✅
 
-PDF → extractBookStructure (.adoc) → asciiDocToJsonLdd (JSON LDD) → importBookSql (SQL)
-                                       → convertToMarkdown (.md) → chunkDocument (JSON chunks)
-                                                                 → exportKnowledgeBase (JSON-L/.md/.adoc)
-                                                                 → codexIngest (pgvector ONNX)
+== Pipeline complet (11 taches)
 
-Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅ | CDX-5 ✅ | CDX-6 ✅ | CDX-7 ✅ | CDX-8 ✅
+CDX-1→12 tous termines. 79/79 tests.
 
-== Prochaine mission (Session 014 — CDX-9)
-
-- Implémentation EPUB — extraction texte + structure depuis fichiers `.epub`
-- Probablement via `org.apache.tika` (deja en dependances) ou via epub-specific parser
-- Reutiliser le meme pipeline (extractText → chunkDocument → codexIngest)
-- Ajouter `codex-epub/` comme sous-projet separate qui importe `codex` comme contrat
-
-== Commandes Gradle valides (STRATEGIE)
-
-----
-# Compiler
-./gradlew :doc-pipeline:compileKotlin
-
-# Tous les tests (62/62)
-./gradlew :doc-pipeline:test
-----
-
-== Configuration pgvector pour codexIngest
-
-Par defaut : `localhost:5432/codex` (user/pass: codex/codex).
-Configurable via `codex { pgvectorHost = "..." }` dans le build.gradle.kts
-ou via `-P` flags : `./gradlew codexIngest -PpgvectorHost=pg.example.com`.
-
-== Aucun blocage connu. Ready pour CDX-9.
+[.text-right]
+*Mis a jour le 12 mai 2026.*

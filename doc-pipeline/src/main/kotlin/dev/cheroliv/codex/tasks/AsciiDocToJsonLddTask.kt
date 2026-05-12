@@ -1,5 +1,7 @@
 package dev.cheroliv.codex.tasks
 
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import org.asciidoctor.Asciidoctor
 import org.asciidoctor.Options
 import org.asciidoctor.ast.Block
@@ -13,6 +15,11 @@ import org.gradle.api.tasks.TaskAction
 import java.io.File
 
 abstract class AsciiDocToJsonLddTask : DefaultTask() {
+
+    companion object {
+        @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+        private val jsonFormat = Json { prettyPrint = true; prettyPrintIndent = "  " }
+    }
 
     @get:InputFile
     abstract val adocFile: RegularFileProperty
@@ -40,7 +47,9 @@ abstract class AsciiDocToJsonLddTask : DefaultTask() {
         val root = DocNode(title = "root", level = 0)
         traverse(document, root)
 
-        val json = toJson(root)
+        val lddNodes = root.children.map { it.toLddNode() }
+        @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+        val json = jsonFormat.encodeToString(ListSerializer(LddNode.serializer()), lddNodes)
         asciidoctor.close()
         return json
     }
@@ -66,62 +75,4 @@ abstract class AsciiDocToJsonLddTask : DefaultTask() {
             }
         }
     }
-
-    private fun toJson(node: DocNode): String {
-        val sb = StringBuilder()
-        writeNode(node, sb, 0)
-        return sb.toString()
-    }
-
-    private fun writeNode(node: DocNode, sb: StringBuilder, depth: Int) {
-        val indent = "  ".repeat(depth)
-
-        if (depth == 0 && node.children.isNotEmpty()) {
-            sb.appendLine("[")
-
-            for (i in 0 until node.children.size) {
-                writeNode(node.children[i], sb, 1)
-                if (i < node.children.size - 1) sb.appendLine(",")
-            }
-
-            sb.appendLine("]")
-        } else if (node.level > 0) {
-            sb.appendLine("${indent}{")
-            sb.appendLine("${indent}  \"title\": \"${esc(node.title)}\",")
-            sb.appendLine("${indent}  \"level\": ${node.level},")
-
-            if (node.children.isEmpty()) {
-                if (sb.endsWith(",\n")) {
-                    sb.setLength(sb.length - 2)
-                    sb.appendLine()
-                }
-            } else {
-                sb.appendLine("${indent}  \"children\": [")
-                for (i in 0 until node.children.size) {
-                    writeNode(node.children[i], sb, depth + 2)
-                    if (i < node.children.size - 1) sb.appendLine(",")
-                }
-                sb.appendLine()
-                sb.appendLine("${indent}  ]")
-            }
-            sb.append("${indent}}")
-        } else if (node.level == -1) {
-            val text = esc(node.title)
-            val displayText = if (text.length > 600) text.substring(0, 600) + "..." else text
-            sb.appendLine("${indent}{")
-            sb.appendLine("${indent}  \"type\": \"paragraph\",")
-            sb.appendLine("${indent}  \"text\": \"$displayText\"")
-            sb.append("${indent}}")
-        }
-    }
-
-    private fun esc(s: String): String {
-        return s
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r")
-            .replace("\t", "\\t")
-    }
-
 }

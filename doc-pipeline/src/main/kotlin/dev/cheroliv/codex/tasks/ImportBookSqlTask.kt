@@ -1,5 +1,6 @@
 package dev.cheroliv.codex.tasks
 
+import kotlinx.serialization.json.Json
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.InputFile
@@ -30,149 +31,8 @@ abstract class ImportBookSqlTask : DefaultTask() {
 
     private fun parseJsonLdd(file: File): List<DocNode> {
         val raw = file.readText().trim()
-        return parseArray(raw, 0).first
-    }
-
-    private fun parseArray(json: String, start: Int): Pair<List<DocNode>, Int> {
-        val nodes = mutableListOf<DocNode>()
-        var i = skipWhitespace(json, start)
-        check(json[i] == '[') { "Attendu '[', trouvé '${json[i]}' à position $i" }
-        i = skipWhitespace(json, i + 1)
-
-        if (json[i] == ']') return nodes to (i + 1)
-
-        while (true) {
-            val (node, next) = parseObject(json, i)
-            nodes.add(node)
-            i = skipWhitespace(json, next)
-
-            if (i >= json.length) break
-            when (json[i]) {
-                ',' -> i = skipWhitespace(json, i + 1)
-                ']' -> return nodes to (i + 1)
-                else -> error("Attendu ',' ou ']', trouvé '${json[i]}' à position $i")
-            }
-        }
-        return nodes to i
-    }
-
-    private fun parseObject(json: String, start: Int): Pair<DocNode, Int> {
-        var i = skipWhitespace(json, start)
-        check(json[i] == '{') { "Attendu '{', trouvé '${json[i]}' à position $i" }
-        i = skipWhitespace(json, i + 1)
-
-        var title = ""
-        var level = -1
-        var isParagraph = false
-        var text = ""
-        val children = mutableListOf<DocNode>()
-
-        while (i < json.length) {
-            if (json[i] == '}') return buildNode(title, level, text, children) to (i + 1)
-
-            check(json[i] == '"') { "Attendu '\"', trouvé '${json[i]}' à position $i" }
-            val key = readString(json, i)
-            i = skipWhitespace(json, key.second)
-            check(json[i] == ':') { "Attendu ':', trouvé '${json[i]}' à position $i" }
-            i = skipWhitespace(json, i + 1)
-
-            when (key.first) {
-                "title" -> {
-                    check(json[i] == '"') { "Attendu string pour title, trouvé '${json[i]}'" }
-                    title = readString(json, i).first
-                    i = readString(json, i).second
-                }
-                "level" -> {
-                    level = readInt(json, i).first
-                    i = readInt(json, i).second
-                }
-                "type" -> {
-                    isParagraph = readString(json, i).first == "paragraph"
-                    i = readString(json, i).second
-                }
-                "text" -> {
-                    text = readString(json, i).first
-                    i = readString(json, i).second
-                }
-                "children" -> {
-                    val (parsedChildren, nextI) = parseArray(json, i)
-                    children.addAll(parsedChildren)
-                    i = nextI
-                }
-                else -> {
-                    skipValue(json, i).let { i = it }
-                }
-            }
-
-            i = skipWhitespace(json, i)
-            if (i < json.length && json[i] == ',') i = skipWhitespace(json, i + 1)
-        }
-
-        return buildNode(title, level, text, children) to i
-    }
-
-    private fun skipValue(json: String, start: Int): Int {
-        var i = start
-        when {
-            json[i] == '"' -> i = readString(json, i).second
-            json[i].isDigit() || json[i] == '-' -> i = readInt(json, i).second
-            json[i] == '{' -> i = parseObject(json, i).second
-            json[i] == '[' -> i = parseArray(json, i).second
-            json[i] == 'n' -> i += 4 // null
-            json[i] == 't' -> i += 4 // true
-            json[i] == 'f' -> i += 5 // false
-        }
-        return i
-    }
-
-    private fun buildNode(title: String, level: Int, text: String, children: List<DocNode>): DocNode {
-        return if (text.isNotEmpty()) {
-            DocNode(title = text, level = -1, children = mutableListOf())
-        } else {
-            DocNode(title = title, level = level, children = children.toMutableList())
-        }
-    }
-
-    private fun readString(json: String, start: Int): Pair<String, Int> {
-        var i = start
-        check(json[i] == '"') { "Attendu '\"', trouvé '${json[i]}' à position $i" }
-        i++
-        val sb = StringBuilder()
-        while (i < json.length && json[i] != '"') {
-            if (json[i] == '\\' && i + 1 < json.length) {
-                i++
-                when (json[i]) {
-                    '\\' -> sb.append('\\')
-                    '"' -> sb.append('"')
-                    'n' -> sb.append('\n')
-                    'r' -> sb.append('\r')
-                    't' -> sb.append('\t')
-                    else -> sb.append(json[i])
-                }
-            } else {
-                sb.append(json[i])
-            }
-            i++
-        }
-        check(i < json.length) { "String non terminée à position $start" }
-        return sb.toString() to (i + 1)
-    }
-
-    private fun readInt(json: String, start: Int): Pair<Int, Int> {
-        var i = start
-        val neg = if (i < json.length && json[i] == '-') { i++; true } else false
-        var value = 0
-        while (i < json.length && json[i].isDigit()) {
-            value = value * 10 + (json[i] - '0')
-            i++
-        }
-        return (if (neg) -value else value) to i
-    }
-
-    private fun skipWhitespace(json: String, start: Int): Int {
-        var i = start
-        while (i < json.length && json[i].isWhitespace()) i++
-        return i
+        val lddNodes = Json.decodeFromString<List<LddNode>>(raw)
+        return lddNodes.map { it.toDocNode() }
     }
 
     private fun generateSql(roots: List<DocNode>): String {

@@ -11,15 +11,15 @@ group = "com.cheroliv"
 
 kotlin {
     compilerOptions {
-        jvmTarget = JvmTarget.JVM_25
+        jvmTarget = JvmTarget.JVM_24
         freeCompilerArgs.addAll("-Xjsr305=strict")
     }
-    jvmToolchain(25)
+    jvmToolchain(24)
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.VERSION_24
+    targetCompatibility = JavaVersion.VERSION_24
     withSourcesJar()
     withJavadocJar()
 }

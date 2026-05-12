@@ -487,7 +487,7 @@ Chaîne CDX-1a ✅ | CDX-1b ✅ | CDX-1c ✅ | CDX-2 ✅ | CDX-3 ✅ | CDX-4 ✅
 - Boucle N2→N3 fermée : le corpus documentaire alimente le vecteur composite du RAG
 
 '''
-== Session 018 — CDX-12 : Tests integration pgvector end-to-end + batching ONNX + codexPipeline
+== Session 019 — EPIC D : Uniformisation Build (Java 25→24 + kotlinx.serialization DocNode)
 
 *Date* : 2026-05-12
 *Type* : test (integration)

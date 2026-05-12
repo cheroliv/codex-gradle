@@ -1,0 +1,28 @@
+= Session 019 — EPIC D (UNI-1, UNI-4) : Uniformisation Build codex-gradle
+:author: cheroliv + opencode (deepseek-v4-pro)
+:date: 2026-05-12
+
+[abstract]
+2 US d'uniformisation build appliquées à codex-gradle dans le cadre d'EPIC D.
+
+== US réalisées
+
+|===
+| US | Changement
+
+| UNI-1
+| Java 25→24 (jvmTarget, jvmToolchain, source/targetCompatibility dans codex.gradle-plugin-conventions)
+
+| UNI-4
+| `DocNode.kt` : ajout `@Serializable LddNode` + conversions `toDocNode()`/`toLddNode()`
+| `ImportBookSqlTask` : parsing JSON manuel (268 lignes) → `Json.decodeFromString<List<LddNode>>` (~100 lignes sauvegardées)
+| `AsciiDocToJsonLddTask` : sérialisation manuelle (127 lignes) → `Json.encodeToString(ListSerializer(LddNode.serializer()))`
+
+| UNI-6
+| .editorconfig racine créé (appliqué au workspace)
+|===
+
+== Build
+
+- :doc-pipeline:compileKotlin ✅
+- :doc-pipeline:compileTestKotlin ✅
