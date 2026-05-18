@@ -28,7 +28,7 @@ Tout contenu genere ou modifie par le LLM DOIT etre classe epistemiquement :
 * `[OPINION]` — avis, critiques, hypothèses non validees
 * `[STRATEGIE]` — plans validés par execution, code compile, build vert
 
-PROMPT_REPRISE.adoc ne doit contenir AUCUNE section OPINION.
+PROMPT_REPRISE (injecte par opencode depuis configuration/) ne doit contenir AUCUNE section OPINION.
 Les sections VISION doivent etre taguées `[VISION]`.
 Les sections STRATEGIE sont les seules a pouvoir contenir des commandes Gradle pretes a executer.
 
@@ -89,7 +89,7 @@ livresque. Codex est le sens de la lecture du pipeline.
 | Fichier | Etat
 | `AGENT.adoc` | ✅ Cree (bootstrap 2026-05-06)
 | `.agents/INDEX.adoc` | ✅ Cree (bootstrap 2026-05-06)
-| `.agents/PROMPT_REPRISE.adoc` | ✅ Cree (bootstrap 2026-05-06)
+| `PROMPT_REPRISE` | ✅ Injecte par opencode (configuration/.agents/PROMPT_REPRISE.adoc)
 | `.agents/SESSION_PROCEDURE.adoc` | ✅ Cree (bootstrap 2026-05-06)
 | `.agents/SESSION_CHECKLIST.adoc` | ✅ Cree (bootstrap 2026-05-06)
 | `.agents/SESSIONS_HISTORY.adoc` | ✅ Cree (bootstrap 2026-05-06)

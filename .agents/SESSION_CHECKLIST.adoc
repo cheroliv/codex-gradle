@@ -2,7 +2,7 @@
 
 == Avant de commencer une session
 
-. [ ] Lire `PROMPT_REPRISE.adoc` — contexte de la session precedente
+. [ ] PROMPT_REPRISE injecte par opencode — ne pas lire localement
 . [ ] Lire `AGENT.adoc` — regles absolues
 . [ ] Verifier l'etat git (`git status`) — branche, fichiers modifies
 . [ ] Verifier que le build compile (`./gradlew :doc-pipeline:compileKotlin`)
@@ -19,6 +19,6 @@
 
 . [ ] Executer les 6 etapes de `SESSION_PROCEDURE.adoc`
 . [ ] Mettre a jour `INDEX.adoc` (numero de session, roadmap)
-. [ ] Mettre a jour `PROMPT_REPRISE.adoc` pour la session suivante
+. [ ] Mettre a jour `configuration/.agents/PROMPT_REPRISE.adoc` pour la session suivante
 . [ ] Verifier l'absence de fichiers sensibles (`grep TOKEN\|SECRET...`)
 . [ ] git status — confirmer que seuls les fichiers intentionnels sont modifies
